@@ -1,24 +1,3 @@
-/*
- * Copyright (C) 2026 Zhou Qiankang <wszqkzqk@qq.com>
- *
- * SPDX-License-Identifier: LGPL-3.0-or-later
- *
- * This file is part of PvZ-Portable.
- *
- * PvZ-Portable is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * PvZ-Portable is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with PvZ-Portable. If not, see <https://www.gnu.org/licenses/>.
- */
-
 #include "Board.h"
 #include "Cutscene.h"
 #include "Challenge.h"
@@ -27,12 +6,9 @@
 #include "CursorObject.h"
 #include "../Resources.h"
 #include "MessageWidget.h"
-#include "graphics/Font.h"
-#include "../PvzpLib/FilterEffect.h"
-#include "misc/SexyMatrix.h"
-
-constexpr const int SLOT_MACHINE_TIME = 400;
-constexpr const int CONVEYOR_SPEED = 4;
+#include "../SexyAppFramework/Font.h"
+#include "../Sexy.TodLib/FilterEffect.h"
+#include "../SexyAppFramework/SexyMatrix.h"
 
 SeedPacket::SeedPacket()
 {
@@ -67,15 +43,15 @@ void SeedPacket::PickNextSlotMachineSeed()
 	};
 
 	int aSeedsCount = 0;
-	PvzpWeightedArray aSeedWeightArray[SeedType::NUM_SEED_TYPES];
-	for (size_t i = 0; i < LENGTH(SLOT_SEED_TYPES); i++)
+	TodWeightedArray aSeedWeightArray[(int)SeedType::NUM_SEED_TYPES];
+	for (int i = 0; i < LENGTH(SLOT_SEED_TYPES); i++)
 	{
 		SeedType aSeedType = SLOT_SEED_TYPES[i];
 
 		int aWeight = 100;
 		if (aSeedType == SeedType::SEED_PEASHOOTER)
 		{
-			aWeight = PvzpAnimateCurve(0, 5, aPeasCount, 200, 100, PvzpCurves::CURVE_LINEAR);
+			aWeight = TodAnimateCurve(0, 5, aPeasCount, 200, 100, TodCurves::CURVE_LINEAR);
 		}
 		else if (aSeedType == SeedType::SEED_SLOT_MACHINE_DIAMOND)
 		{
@@ -90,12 +66,12 @@ void SeedPacket::PickNextSlotMachineSeed()
 			}
 		}
 
-		aSeedWeightArray[aSeedsCount].mItem = static_cast<int>(aSeedType);
+		aSeedWeightArray[aSeedsCount].mItem = (int)aSeedType;
 		aSeedWeightArray[aSeedsCount].mWeight = aWeight;
 		aSeedsCount++;
 	}
 
-	mSlotMachiningNextSeed = static_cast<SeedType>(PvzpPickFromWeightedArray(aSeedWeightArray, aSeedsCount));
+	mSlotMachiningNextSeed = (SeedType)TodPickFromWeightedArray(aSeedWeightArray, aSeedsCount);
 }
 
 void SeedPacket::SlotMachineStart()
@@ -113,9 +89,9 @@ void SeedPacket::FlashIfReady()
 	if (!mBoard->HasConveyorBeltSeedBank())
 	{
 		int aRenderPosition = Board::MakeRenderOrder(RenderLayer::RENDER_LAYER_UI_BOTTOM, 0, 2);
-		mApp->AddPvzpParticle(mX + mBoard->mSeedBank->mX, mY + mBoard->mSeedBank->mY, aRenderPosition, ParticleEffect::PARTICLE_SEED_PACKET_FLASH);
+		mApp->AddTodParticle(mX + mBoard->mSeedBank->mX, mY + mBoard->mSeedBank->mY, aRenderPosition, ParticleEffect::PARTICLE_SEED_PACKET_FLASH);
 	}
-
+	
 	if (mBoard->mTutorialState == TutorialState::TUTORIAL_LEVEL_1_REFRESH_PEASHOOTER)
 	{
 		mBoard->SetTutorialState(TutorialState::TUTORIAL_LEVEL_1_PICK_UP_PEASHOOTER);
@@ -132,7 +108,7 @@ void SeedPacket::FlashIfReady()
 
 void SeedPacket::Activate()
 {
-	PVZP_ASSERT(mPacketType != SeedType::SEED_NONE);
+	TOD_ASSERT(mPacketType != SeedType::SEED_NONE);
 	mActive = true;
 }
 
@@ -183,7 +159,7 @@ void SeedPacket::Update()
 	if (mSlotMachineCountDown > 0)
 	{
 		mSlotMachineCountDown--;
-		float aFlipsPerSecont = PvzpAnimateCurveFloat(SLOT_MACHINE_TIME, 0, mSlotMachineCountDown, 6.0f, 2.0f, PvzpCurves::CURVE_LINEAR);
+		float aFlipsPerSecont = TodAnimateCurveFloat(SLOT_MACHINE_TIME, 0, mSlotMachineCountDown, 6.0f, 2.0f, TodCurves::CURVE_LINEAR);
 		mSlotMachiningPosition += aFlipsPerSecont * 0.01f;
 
 		if (mSlotMachiningPosition >= 1.0f)
@@ -223,55 +199,55 @@ void SeedPacketDrawSeed(Graphics* g, float x, float y, SeedType theSeedType, See
 
 	if (aSeedType == SeedType::SEED_POTATOMINE && g->mScaleX <= 1.0f)
 	{
-		PvzpDrawImageCelScaledF(g, aImage, x, y, 0, 0, g->mScaleX, g->mScaleY);
+		TodDrawImageCelScaledF(g, aImage, x, y, 0, 0, g->mScaleX, g->mScaleY);
 	}
 	else if (aSeedType == SeedType::SEED_CHOMPER && g->mScaleX <= 1.0f)
 	{
-		PvzpDrawImageCelScaledF(g, aImage, x, y, 1, 0, g->mScaleX, g->mScaleY);
+		TodDrawImageCelScaledF(g, aImage, x, y, 1, 0, g->mScaleX, g->mScaleY);
 	}
 	else if (aSeedType == SeedType::SEED_HYPNOSHROOM && g->mScaleX <= 1.0f)
 	{
-		PvzpDrawImageCelScaledF(g, aImage, x, y, 2, 0, g->mScaleX, g->mScaleY);
+		TodDrawImageCelScaledF(g, aImage, x, y, 2, 0, g->mScaleX, g->mScaleY);
 	}
 	else if (aSeedType == SeedType::SEED_TALLNUT && g->mScaleX <= 1.0f)
 	{
-		PvzpDrawImageCelScaledF(g, aImage, x, y, 3, 0, g->mScaleX, g->mScaleY);
+		TodDrawImageCelScaledF(g, aImage, x, y, 3, 0, g->mScaleX, g->mScaleY);
 	}
 	else if (aSeedType == SeedType::SEED_BLOVER && g->mScaleX <= 1.0f)
 	{
-		PvzpDrawImageCelScaledF(g, aImage, x, y, 4, 0, g->mScaleX, g->mScaleY);
+		TodDrawImageCelScaledF(g, aImage, x, y, 4, 0, g->mScaleX, g->mScaleY);
 	}
 	else if (aSeedType == SeedType::SEED_PUMPKINSHELL && g->mScaleX <= 1.0f)
 	{
-		PvzpDrawImageCelScaledF(g, aImage, x, y, 5, 0, g->mScaleX, g->mScaleY);
+		TodDrawImageCelScaledF(g, aImage, x, y, 5, 0, g->mScaleX, g->mScaleY);
 	}
 	else if (aSeedType == SeedType::SEED_TWINSUNFLOWER && g->mScaleX <= 1.0f)
 	{
-		PvzpDrawImageCelScaledF(g, aImage, x, y, 6, 0, g->mScaleX, g->mScaleY);
+		TodDrawImageCelScaledF(g, aImage, x, y, 6, 0, g->mScaleX, g->mScaleY);
 	}
 	else if (aSeedType == SeedType::SEED_COBCANNON && g->mScaleX <= 1.0f)
 	{
-		PvzpDrawImageCelScaledF(g, aImage, x, y, 7, 0, g->mScaleX, g->mScaleY);
+		TodDrawImageCelScaledF(g, aImage, x, y, 7, 0, g->mScaleX, g->mScaleY);
 	}
 	else if (aSeedType == SeedType::SEED_CABBAGEPULT && g->mScaleX <= 1.0f)
 	{
-		PvzpDrawImageCelScaledF(g, aImage, x, y, 8, 0, g->mScaleX, g->mScaleY);
+		TodDrawImageCelScaledF(g, aImage, x, y, 8, 0, g->mScaleX, g->mScaleY);
 	}
 	else if (aSeedType == SeedType::SEED_KERNELPULT && g->mScaleX <= 1.0f)
 	{
-		PvzpDrawImageCelScaledF(g, aImage, x, y, 9, 0, g->mScaleX, g->mScaleY);
+		TodDrawImageCelScaledF(g, aImage, x, y, 9, 0, g->mScaleX, g->mScaleY);
 	}
 	else if (aSeedType == SeedType::SEED_MELONPULT && g->mScaleX <= 1.0f)
 	{
-		PvzpDrawImageCelScaledF(g, aImage, x, y, 10, 0, g->mScaleX, g->mScaleY);
+		TodDrawImageCelScaledF(g, aImage, x, y, 10, 0, g->mScaleX, g->mScaleY);
 	}
 	else if (aSeedType == SeedType::SEED_WINTERMELON && g->mScaleX <= 1.0f)
 	{
-		PvzpDrawImageCelScaledF(g, aImage, x, y, 11, 0, g->mScaleX, g->mScaleY);
+		TodDrawImageCelScaledF(g, aImage, x, y, 11, 0, g->mScaleX, g->mScaleY);
 	}
 	else if (aSeedType == SeedType::SEED_SPIKEROCK && g->mScaleX <= 1.0f)
 	{
-		PvzpDrawImageCelScaledF(g, aImage, x, y, 12, 0, g->mScaleX, g->mScaleY);
+		TodDrawImageCelScaledF(g, aImage, x, y, 12, 0, g->mScaleX, g->mScaleY);
 	}
 	else
 	{
@@ -301,23 +277,45 @@ void DrawSeedPacket(Graphics* g, float x, float y, SeedType theSeedType, SeedTyp
 		g->SetColorizeImages(true);
 	}
 
-	int aPacketBackground =
-		theSeedType == SeedType::SEED_IMITATER ? 0 :
-		Plant::IsUpgrade(aSeedType) ? 1 :
-		theSeedType == SeedType::SEED_BEGHOULED_BUTTON_CRATER ? 3 :
-		theSeedType == SeedType::SEED_BEGHOULED_BUTTON_SHUFFLE ? 4 :
-		theSeedType == SeedType::SEED_SLOT_MACHINE_SUN ? 5 :
-		theSeedType == SeedType::SEED_SLOT_MACHINE_DIAMOND ? 6 :
-		theSeedType == SeedType::SEED_ZOMBIQUARIUM_SNORKLE ? 7 :
-		theSeedType == SeedType::SEED_ZOMBIQUARIUM_TROPHY ? 8 : 2;
-
-	if (g->mScaleX > 1)
+	int aPacketBackground;
+	if (theSeedType == SeedType::SEED_IMITATER)
+		aPacketBackground = 0;
+	else if (Plant::IsUpgrade(aSeedType))
+		aPacketBackground = 1;
+	else if (theSeedType == SeedType::SEED_BEGHOULED_BUTTON_CRATER)
+		aPacketBackground = 3;
+	else if (theSeedType == SeedType::SEED_BEGHOULED_BUTTON_SHUFFLE)
+		aPacketBackground = 4;
+	else if (theSeedType == SeedType::SEED_SLOT_MACHINE_SUN)
+		aPacketBackground = 5;
+	else if (theSeedType == SeedType::SEED_SLOT_MACHINE_DIAMOND)
+		aPacketBackground = 6;
+	else if (theSeedType == SeedType::SEED_ZOMBIQUARIUM_SNORKLE)
+		aPacketBackground = 7;
+	else if (theSeedType == SeedType::SEED_ZOMBIQUARIUM_TROPHY)
+		aPacketBackground = 8;
+	else if ((theSeedType >= SeedType::SEED_ZOMBIE_NORMAL && theSeedType < SeedType::NUM_ZOMBIE_SEEDS) && USE_ZOMBIE_SEED_VARIANT)
+		aPacketBackground = 9;
+	else
+		aPacketBackground = 2;
+	bool isGoldenSeed = (aSeedType == SeedType::SEED_PRIMALPOTATOMINE ||
+		aSeedType == SeedType::SEED_PRIMALSUNFLOWER ||
+		aSeedType == SeedType::SEED_GOOPEA ||
+		aSeedType == SeedType::SEED_DROPPEA ||
+		aSeedType == SeedType::SEED_CPEA ||
+		aSeedType == SeedType::SEED_ROCKPEA ||
+		aSeedType == SeedType::SEED_SUNPEA) && theSeedType != SeedType::SEED_IMITATER; 
+	if (isGoldenSeed)
 	{
-		PvzpDrawImageCelScaledF(g, Sexy::IMAGE_SEEDPACKET_LARGER, x, y, 0, 0, g->mScaleX * 0.5f, g->mScaleY * 0.5f);
+		TodDrawImageCelScaledF(g, Sexy::IMAGE_SEEDPACKET_GOLDEN, x, y, 0, 0, g->mScaleX, g->mScaleY);
+	}
+	else if (g->mScaleX > 1)
+	{
+		TodDrawImageCelScaledF(g, Sexy::IMAGE_SEEDPACKET_LARGER, x, y, 0, 0, g->mScaleX * 0.5f, g->mScaleY * 0.5f);
 	}
 	else
 	{
-		PvzpDrawImageCelScaledF(g, Sexy::IMAGE_SEEDS, x, y, aPacketBackground, 0, g->mScaleX, g->mScaleY);
+		TodDrawImageCelScaledF(g, USE_CONSOLE_SEED_VARIANTS ? Sexy::IMAGE_CONSOLE_SEEDS : Sexy::IMAGE_SEEDS, x, y, aPacketBackground, 0, g->mScaleX, g->mScaleY);
 	}
 
 	float aScale = 0.5f;
@@ -354,12 +352,17 @@ void DrawSeedPacket(Graphics* g, float x, float y, SeedType theSeedType, SeedTyp
 		aOffsetX = 8.0f;
 		aOffsetY = 12.0f;
 		break;
-
+	case SeedType::SEED_PRIMALPOTATOMINE:
+		aScale = 0.4f;
+		aOffsetX = 8.0f;
+		aOffsetY = 12.0f;
+		break;
 	case SeedType::SEED_MAGNETSHROOM:
 		aOffsetY = 12.0f;
 		break;
 
 	case SeedType::SEED_FUMESHROOM:
+	case SeedType::SEED_ACID_LEMON:
 	case SeedType::SEED_PUMPKINSHELL:
 	case SeedType::SEED_CHOMPER:
 	case SeedType::SEED_DOOMSHROOM:
@@ -405,7 +408,11 @@ void DrawSeedPacket(Graphics* g, float x, float y, SeedType theSeedType, SeedTyp
 		aOffsetX = 15.0f;
 		aOffsetY = 14.0f;
 		break;
-
+	case SeedType::SEED_PEPPERPULT:
+		aScale = 0.4f;
+		aOffsetX = 15.0f;
+		aOffsetY = 14.0f;
+		break;
 	case SeedType::SEED_MELONPULT:
 	case SeedType::SEED_WINTERMELON:
 		aScale = 0.35f;
@@ -431,6 +438,81 @@ void DrawSeedPacket(Graphics* g, float x, float y, SeedType theSeedType, SeedTyp
 		aOffsetY = 17.0f;
 		break;
 
+
+	case SeedType::SEED_TIME_APPLE:
+		aScale = 0.38f;
+		aOffsetX = 12.0f;
+		aOffsetY = 15.0f;
+		break;
+
+	case SeedType::SEED_CUCKUMBER:
+		aScale = 0.55f;
+		aOffsetX = -3.0f;
+		aOffsetY = -5.0f;
+		break;
+
+	case SeedType::SEED_MOONFLOWER:
+		aScale = 0.35f;
+		aOffsetX = 12.0f;
+		aOffsetY = 20.0f;
+		break;
+
+	case SeedType::SEED_SNAPDRAGON:
+		aScale = 0.46f;
+		aOffsetX = 5.0f;
+		aOffsetY = 10.0f;
+		break;
+
+	case SeedType::SEED_SUN_MAGNET:
+		aScale = 0.46f;
+		aOffsetX = 5.0f;
+		aOffsetY = 5.0f;
+		break;
+
+	
+	case SeedType::SEED_HAMMER_SHROOM:
+		aScale = 0.35f;
+		aOffsetX = 12.0f;
+		aOffsetY = 15.0f;
+		break;
+
+	case SeedType::SEED_SPORESHROOM:
+		aScale = 0.35f;
+		aOffsetX = 11.0f;
+		aOffsetY = 16.0f;
+		break;
+
+	case SeedType::SEED_GUARDIAN_SHROOM:
+		aScale = 0.25f;
+		aOffsetX = 5.0f;
+		aOffsetY = 12.0f;
+		break;
+
+	case SeedType::SEED_SUN_BAN:
+		aScale = 0.40f;
+		aOffsetX = 8.0f;
+		aOffsetY = 12.0f;
+		break;
+
+	case SeedType::SEED_MINI_GUARDIAN_SHROOM:
+		aScale = 0.30f;
+		aOffsetX = 12.0f;
+		aOffsetY = 15.0f;
+		break;
+
+	case SeedType::SEED_XSHROOM:
+		aScale = 0.3f;
+		aOffsetX = 14.0f;
+		aOffsetY = 18.0f;
+		break;
+
+
+	case SeedType::SEED_SAKURA:
+		aScale = 0.46f;
+		aOffsetX = 8.0f;
+		aOffsetY = 10.0f;
+		break;
+
 	case SeedType::SEED_STARFRUIT:
 		aScale = 0.5f;
 		aOffsetX = 6.0f;
@@ -452,15 +534,10 @@ void DrawSeedPacket(Graphics* g, float x, float y, SeedType theSeedType, SeedTyp
 	case SeedType::SEED_ZOMBIE_NORMAL:
 	case SeedType::SEED_ZOMBIE_TRAFFIC_CONE:
 	case SeedType::SEED_ZOMBIE_PAIL:
+	case SeedType::SEED_ZOMBIE_DANCER:
 		aScale = 0.35f;
 		aOffsetX = -3.0f;
 		aOffsetY = -7.0f;
-		break;
-
-	case SeedType::SEED_ZOMBIE_DANCER:
-		aScale = 0.375f;
-		aOffsetX = -19.0f;
-		aOffsetY = -40.0f;
 		break;
 
 	case SeedType::SEED_ZOMBIE_POLEVAULTER:
@@ -522,8 +599,6 @@ void DrawSeedPacket(Graphics* g, float x, float y, SeedType theSeedType, SeedTyp
 	case SeedType::SEED_ZOMBIQUARIUM_TROPHY:
 		aDrawSeedInMiddle = false;
 		break;
-	default:
-		break;
 	}
 	if (((LawnApp*)gSexyAppBase)->mGameMode == GameMode::GAMEMODE_CHALLENGE_BIG_TIME)
 	{
@@ -553,7 +628,7 @@ void DrawSeedPacket(Graphics* g, float x, float y, SeedType theSeedType, SeedTyp
 		aPlantG.SetColor(Color(64, 64, 64, 255));
 		aPlantG.SetColorizeImages(true);
 		aPlantG.ClipRect(x, y, SEED_PACKET_WIDTH, aDarknessHeight);
-		PvzpDrawImageCelScaledF(&aPlantG, Sexy::IMAGE_SEEDS, x, y, aPacketBackground, 0, aPlantG.mScaleX, aPlantG.mScaleY);
+		TodDrawImageCelScaledF(&aPlantG, Sexy::IMAGE_SEEDS, x, y, aPacketBackground, 0, aPlantG.mScaleX, aPlantG.mScaleY);
 		if (aDrawSeedInMiddle)
 		{
 			SeedPacketDrawSeed(&aPlantG, x, y, theSeedType, theImitaterType, aOffsetX, aOffsetY, aScale);
@@ -562,39 +637,39 @@ void DrawSeedPacket(Graphics* g, float x, float y, SeedType theSeedType, SeedTyp
 
 	if (theDrawCost)
 	{
-		std::string aCostStr;
+		SexyString aCostStr;
 		if (gLawnApp->mBoard && gLawnApp->mBoard->PlantUsesAcceleratedPricing(aSeedType))
 		{
 			if (theUseCurrentCost)
 			{
-				aCostStr = StrFormat("%d", gLawnApp->mBoard->GetCurrentPlantCost(theSeedType, theImitaterType));
+				aCostStr = StrFormat(_S("%d"), gLawnApp->mBoard->GetCurrentPlantCost(theSeedType, theImitaterType));
 			}
 			else
 			{
-				aCostStr = StrFormat("%d+", Plant::GetCost(theSeedType, theImitaterType));
+				aCostStr = StrFormat(_S("%d+"), Plant::GetCost(theSeedType, theImitaterType));
 			}
 		}
 		else
 		{
-			aCostStr = StrFormat("%d", Plant::GetCost(theSeedType, theImitaterType));
+			aCostStr = StrFormat(_S("%d"), Plant::GetCost(theSeedType, theImitaterType));
 		}
 
-		_Font* aTextFont = Sexy::FONT_PICO129;
+		Font* aTextFont = USE_OLD_STYLE_SEEDPACKET ? Sexy::FONT_PICO129 : Sexy::FONT_BRIANNETOD12;
 		int aTextOffsetX = 32 - aTextFont->StringWidth(aCostStr);
-		int aTextOffsetY = aTextFont->GetAscent() + 54;
+		int aTextOffsetY = aTextFont->GetAscent() + (USE_OLD_STYLE_SEEDPACKET ? 54 : 52) - (USE_CONSOLE_SEED_VARIANTS ? 2 : 0);
 		if (g->mScaleX == 1.0f && g->mScaleY == 1.0f)
 		{
-			PvzpDrawString(g, aCostStr, x + aTextOffsetX, y + aTextOffsetY, aTextFont, Color::Black, DS_ALIGN_LEFT);
+			TodDrawString(g, aCostStr, x + aTextOffsetX, y + aTextOffsetY, aTextFont, Color::Black, DS_ALIGN_LEFT);
 		}
 		else
 		{
 			SexyMatrix3 aMatrix;
-			PvzpScaleTransformMatrix(aMatrix, aTextOffsetX * g->mScaleX + x, aTextOffsetY * g->mScaleY + y, g->mScaleX, g->mScaleY);
+			TodScaleTransformMatrix(aMatrix, aTextOffsetX * g->mScaleX + x, aTextOffsetY * g->mScaleY + y, g->mScaleX, g->mScaleY);
 			if (g->mScaleX > 1.8f)
 			{
 				g->SetLinearBlend(false);
 			}
-			PvzpDrawStringMatrix(g, aTextFont, aMatrix, aCostStr, Color::Black);
+			TodDrawStringMatrix(g, aTextFont, aMatrix, aCostStr, Color::Black);
 			g->SetLinearBlend(true);
 		}
 	}
@@ -613,7 +688,7 @@ void SeedPacket::Draw(Graphics* g)
 		}
 		else
 		{
-			aPercentDark = static_cast<float>(mRefreshTime - mRefreshCounter) / static_cast<float>(mRefreshTime);
+			aPercentDark = (float)(mRefreshTime - mRefreshCounter) / (float)mRefreshTime;
 		}
 	}
 
@@ -724,7 +799,6 @@ bool SeedPacket::CanPickUp()
 
 void SeedPacket::MouseDown(int x, int y, int theClickCount)
 {
-	(void)x;(void)y;(void)theClickCount;
 	if (mBoard->mPaused || mApp->mGameScene != GameScenes::SCENE_PLAYING || mPacketType == SeedType::SEED_NONE)
 	{
 		return;
@@ -734,9 +808,9 @@ void SeedPacket::MouseDown(int x, int y, int theClickCount)
 	{
 		if (!mBoard->mAdvice->IsBeingDisplayed())
 		{
-			mBoard->DisplayAdvice("[ADVICE_SLOT_MACHINE_PULL]", MessageStyle::MESSAGE_STYLE_HINT_TALL_FAST, AdviceType::ADVICE_NONE);
+			mBoard->DisplayAdvice(_S("[ADVICE_SLOT_MACHINE_PULL]"), MessageStyle::MESSAGE_STYLE_HINT_TALL_FAST, AdviceType::ADVICE_NONE);
 		}
-		mBoard->mChallenge->mSlotMachineRollCount = std::min(mBoard->mChallenge->mSlotMachineRollCount, 2);
+		mBoard->mChallenge->mSlotMachineRollCount = min(mBoard->mChallenge->mSlotMachineRollCount, 2);
 		return;
 	}
 
@@ -751,9 +825,9 @@ void SeedPacket::MouseDown(int x, int y, int theClickCount)
 		if (!mActive)
 		{
 			mApp->PlaySample(SOUND_BUZZER);
-			if (mApp->IsFirstTimeAdventureMode() && mBoard->mLevel == 1 && mBoard->mHelpDisplayed[AdviceType::ADVICE_CLICK_ON_SUN])
+			if (mApp->IsFirstTimeAdventureMode() && mBoard->mLevel == 1 && mBoard->mHelpDisplayed[(int)AdviceType::ADVICE_CLICK_ON_SUN])
 			{
-				mBoard->DisplayAdvice("[ADVICE_SEED_REFRESH]", MessageStyle::MESSAGE_STYLE_TUTORIAL_LEVEL1, AdviceType::ADVICE_SEED_REFRESH);
+				mBoard->DisplayAdvice(_S("[ADVICE_SEED_REFRESH]"), MessageStyle::MESSAGE_STYLE_TUTORIAL_LEVEL1, AdviceType::ADVICE_SEED_REFRESH);
 			}
 			return;
 		}
@@ -763,9 +837,9 @@ void SeedPacket::MouseDown(int x, int y, int theClickCount)
 		{
 			mApp->PlaySample(SOUND_BUZZER);
 			mBoard->mOutOfMoneyCounter = 70;
-			if (mApp->IsFirstTimeAdventureMode() && mBoard->mLevel == 1 && mBoard->mHelpDisplayed[AdviceType::ADVICE_CLICK_ON_SUN])
+			if (mApp->IsFirstTimeAdventureMode() && mBoard->mLevel == 1 && mBoard->mHelpDisplayed[(int)AdviceType::ADVICE_CLICK_ON_SUN])
 			{
-				mBoard->DisplayAdvice("[ADVICE_CANT_AFFORD_PLANT]", MessageStyle::MESSAGE_STYLE_TUTORIAL_LEVEL1, AdviceType::ADVICE_CANT_AFFORD_PLANT);
+				mBoard->DisplayAdvice(_S("[ADVICE_CANT_AFFORD_PLANT]"), MessageStyle::MESSAGE_STYLE_TUTORIAL_LEVEL1, AdviceType::ADVICE_CANT_AFFORD_PLANT);
 			}
 			return;
 		}
@@ -773,35 +847,41 @@ void SeedPacket::MouseDown(int x, int y, int theClickCount)
 		if (!mBoard->PlantingRequirementsMet(aUseSeedType))
 		{
 			mApp->PlaySample(SOUND_BUZZER);
-			switch (aUseSeedType)
+			if (aUseSeedType == SeedType::SEED_GATLINGPEA)
 			{
-			case SeedType::SEED_GATLINGPEA:
-				mBoard->DisplayAdvice("[ADVICE_PLANT_NEEDS_REPEATER]", MessageStyle::MESSAGE_STYLE_HINT_LONG, AdviceType::ADVICE_PLANT_NEEDS_REPEATER);
-				break;
-			case SeedType::SEED_WINTERMELON:
-				mBoard->DisplayAdvice("[ADVICE_PLANT_NEEDS_MELONPULT]", MessageStyle::MESSAGE_STYLE_HINT_LONG, AdviceType::ADVICE_PLANT_NEEDS_MELONPULT);
-				break;
-			case SeedType::SEED_TWINSUNFLOWER:
-				mBoard->DisplayAdvice("[ADVICE_PLANT_NEEDS_SUNFLOWER]", MessageStyle::MESSAGE_STYLE_HINT_LONG, AdviceType::ADVICE_PLANT_NEEDS_SUNFLOWER);
-				break;
-			case SeedType::SEED_SPIKEROCK:
-				mBoard->DisplayAdvice("[ADVICE_PLANT_NEEDS_SPIKEWEED]", MessageStyle::MESSAGE_STYLE_HINT_LONG, AdviceType::ADVICE_PLANT_NEEDS_SPIKEWEED);
-				break;
-			case SeedType::SEED_COBCANNON:
-				mBoard->DisplayAdvice("[ADVICE_PLANT_NEEDS_KERNELPULT]", MessageStyle::MESSAGE_STYLE_HINT_LONG, AdviceType::ADVICE_PLANT_NEEDS_KERNELPULT);
-				break;
-			case SeedType::SEED_GOLD_MAGNET:
-				mBoard->DisplayAdvice("[ADVICE_PLANT_NEEDS_MAGNETSHROOM]", MessageStyle::MESSAGE_STYLE_HINT_LONG, AdviceType::ADVICE_PLANT_NEEDS_MAGNETSHROOM);
-				break;
-			case SeedType::SEED_GLOOMSHROOM:
-				mBoard->DisplayAdvice("[ADVICE_PLANT_NEEDS_FUMESHROOM]", MessageStyle::MESSAGE_STYLE_HINT_LONG, AdviceType::ADVICE_PLANT_NEEDS_FUMESHROOM);
-				break;
-			case SeedType::SEED_CATTAIL:
-				mBoard->DisplayAdvice("[ADVICE_PLANT_NEEDS_LILYPAD]", MessageStyle::MESSAGE_STYLE_HINT_LONG, AdviceType::ADVICE_PLANT_NEEDS_LILYPAD);
-				break;
-			default:
-				PVZP_ASSERT(false);
-				break;
+				mBoard->DisplayAdvice(_S("[ADVICE_PLANT_NEEDS_REPEATER]"), MessageStyle::MESSAGE_STYLE_HINT_LONG, AdviceType::ADVICE_PLANT_NEEDS_REPEATER);
+			}
+			else if (aUseSeedType == SeedType::SEED_WINTERMELON)
+			{
+				mBoard->DisplayAdvice(_S("[ADVICE_PLANT_NEEDS_MELONPULT]"), MessageStyle::MESSAGE_STYLE_HINT_LONG, AdviceType::ADVICE_PLANT_NEEDS_MELONPULT);
+			}
+			else if (aUseSeedType == SeedType::SEED_TWINSUNFLOWER)
+			{
+				mBoard->DisplayAdvice(_S("[ADVICE_PLANT_NEEDS_SUNFLOWER]"), MessageStyle::MESSAGE_STYLE_HINT_LONG, AdviceType::ADVICE_PLANT_NEEDS_SUNFLOWER);
+			}
+			else if (aUseSeedType == SeedType::SEED_SPIKEROCK)
+			{
+				mBoard->DisplayAdvice(_S("[ADVICE_PLANT_NEEDS_SPIKEWEED]"), MessageStyle::MESSAGE_STYLE_HINT_LONG, AdviceType::ADVICE_PLANT_NEEDS_SPIKEWEED);
+			}
+			else if (aUseSeedType == SeedType::SEED_COBCANNON)
+			{
+				mBoard->DisplayAdvice(_S("[ADVICE_PLANT_NEEDS_KERNELPULT]"), MessageStyle::MESSAGE_STYLE_HINT_LONG, AdviceType::ADVICE_PLANT_NEEDS_KERNELPULT);
+			}
+			else if (aUseSeedType == SeedType::SEED_GOLD_MAGNET)
+			{
+				mBoard->DisplayAdvice(_S("[ADVICE_PLANT_NEEDS_MAGNETSHROOM]"), MessageStyle::MESSAGE_STYLE_HINT_LONG, AdviceType::ADVICE_PLANT_NEEDS_MAGNETSHROOM);
+			}
+			else if (aUseSeedType == SeedType::SEED_GLOOMSHROOM)
+			{
+				mBoard->DisplayAdvice(_S("[ADVICE_PLANT_NEEDS_FUMESHROOM]"), MessageStyle::MESSAGE_STYLE_HINT_LONG, AdviceType::ADVICE_PLANT_NEEDS_FUMESHROOM);
+			}
+			else if (aUseSeedType == SeedType::SEED_CATTAIL)
+			{
+				mBoard->DisplayAdvice(_S("[ADVICE_PLANT_NEEDS_LILYPAD]"), MessageStyle::MESSAGE_STYLE_HINT_LONG, AdviceType::ADVICE_PLANT_NEEDS_LILYPAD);
+			}
+			else
+			{
+				TOD_ASSERT();
 			}
 
 			return;
@@ -871,7 +951,7 @@ void SeedPacket::MouseDown(int x, int y, int theClickCount)
 
 void SeedPacket::WasPlanted()
 {
-	PVZP_ASSERT(mPacketType != SeedType::SEED_NONE);
+	TOD_ASSERT(mPacketType != SeedType::SEED_NONE);
 
 	if (mBoard->HasConveyorBeltSeedBank())
 	{
@@ -975,14 +1055,14 @@ void SeedBank::Draw(Graphics* g)
 
 	if (!mBoard->HasConveyorBeltSeedBank())
 	{
-		std::string aMoneyLabel = StrFormat("%d", std::max(mBoard->mSunMoney, 0));
+		SexyString aMoneyLabel = StrFormat(_S("%d"), max(mBoard->mSunMoney, 0));
 		Color aMoneyColor(0, 0, 0);
 		if (mBoard->mOutOfMoneyCounter > 0 && mBoard->mOutOfMoneyCounter % 20 < 10)
 		{
 			aMoneyColor = Color(255, 0, 0);
 		}
 
-		PvzpDrawString(g, aMoneyLabel, 34, 78, FONT_CONTINUUMBOLD14, aMoneyColor, DrawStringJustification::DS_ALIGN_CENTER);
+		TodDrawString(g, aMoneyLabel, 34, 78, FONT_CONTINUUMBOLD14, aMoneyColor, DrawStringJustification::DS_ALIGN_CENTER);
 	}
 
 	if (mApp->mGameScene != GameScenes::SCENE_PLAYING)
@@ -1017,8 +1097,8 @@ bool SeedBank::ContainsPoint(int theX, int theY)
 
 void SeedBank::AddSeed(SeedType theSeedType, bool thePlaceOnLeft)
 {
-	PVZP_ASSERT(mBoard->HasConveyorBeltSeedBank());
-	PVZP_ASSERT(theSeedType != SeedType::SEED_NONE);
+	TOD_ASSERT(mBoard->HasConveyorBeltSeedBank());
+	TOD_ASSERT(theSeedType != SeedType::SEED_NONE);
 
 	int aNumSeeds = GetNumSeedsOnConveyorBelt();
 	if (aNumSeeds == mNumPackets)
@@ -1049,8 +1129,8 @@ void SeedBank::AddSeed(SeedType theSeedType, bool thePlaceOnLeft)
 
 void SeedBank::RemoveSeed(int theIndex)
 {
-	PVZP_ASSERT(mBoard->HasConveyorBeltSeedBank());
-	PVZP_ASSERT(theIndex >= 0 && theIndex < GetNumSeedsOnConveyorBelt());
+	TOD_ASSERT(mBoard->HasConveyorBeltSeedBank());
+	TOD_ASSERT(theIndex >= 0 && theIndex < GetNumSeedsOnConveyorBelt());
 
 	for (int i = theIndex; i < mNumPackets; i++)
 	{
@@ -1154,7 +1234,7 @@ void SeedBank::UpdateConveyorBelt()
 			SeedPacket* aSeedPacket = &mSeedPackets[i];
 			if (aSeedPacket->mOffsetX > 0)
 			{
-				aSeedPacket->mOffsetX = std::max(aSeedPacket->mOffsetX - 1, 0);
+				aSeedPacket->mOffsetX = max(aSeedPacket->mOffsetX - 1, 0);
 			}
 		}
 

@@ -1,30 +1,9 @@
-/*
- * Copyright (C) 2026 Zhou Qiankang <wszqkzqk@qq.com>
- *
- * SPDX-License-Identifier: LGPL-3.0-or-later
- *
- * This file is part of PvZ-Portable.
- *
- * PvZ-Portable is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * PvZ-Portable is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with PvZ-Portable. If not, see <https://www.gnu.org/licenses/>.
- */
-
 #include "../Resources.h"
 #include "ToolTipWidget.h"
 #include "../GameConstants.h"
-#include "../PvzpLib/PvzpCommon.h"
-#include "graphics/Font.h"
-#include "../PvzpLib/PvzpStringFile.h"
+#include "../Sexy.TodLib/TodCommon.h"
+#include "../SexyAppFramework/Font.h"
+#include "../Sexy.TodLib/TodStringFile.h"
 
 using namespace Sexy;
 
@@ -40,137 +19,100 @@ ToolTipWidget::ToolTipWidget()
 	mMaxBottom = BOARD_HEIGHT;
 	mGetsLinesWidth = 0;
 	mWarningFlashCounter = 0;
-	mMaxLinesWidth = 0;
 }
 
-void ToolTipWidget::GetLines(std::vector<std::string>& theLines)
+void ToolTipWidget::GetLines(std::vector<SexyString>& theLines)
 {
 	int aLineWidth = 0;
-	size_t aLineStart = 0;
-	size_t aCurPos = 0;
-	char32_t aPrevChar = 0;
+	unsigned int aIndexStart = 0;
+	unsigned int aIndexInLine = 0;
 
-	int aBreakDrawLen = -1;
-	size_t aBreakResumePos = 0;
-
-	while (aCurPos < mLabel.size())
+	Font* aFont = USE_OLD_STYLE_TOOLTIP ? FONT_PICO129 : FONT_BRIANNETOD12;
+	SexyString aLabel = TodStringTranslate(mLabel);
+	while (aIndexInLine != aLabel.size())
 	{
-		size_t aCharStart = aCurPos;
-		char32_t aChar;
-		if (!Sexy::UTF8DecodeNext(mLabel, aCurPos, aChar))
+		while (aIndexInLine < aLabel.size() && aLabel[aIndexInLine] != ' ' && aLabel[aIndexInLine] != '\n')
 		{
-			aCurPos = aCharStart + 1;
-			continue;
+			aLineWidth += aFont->CharWidth(aLabel[aIndexInLine]);
+			aIndexInLine++;
 		}
-		if (aChar == U'\r')  // skip CR for CRLF/LF compatibility
-			continue;
-		size_t aCharEnd = aCurPos;
 
-		if (aChar == U'\n')
+		if (aIndexInLine != aLabel.size() && aLineWidth < mGetsLinesWidth && aLabel[aIndexInLine] != '\n')
 		{
-			theLines.push_back(mLabel.substr(aLineStart, aCharStart - aLineStart));
+			aLineWidth += aFont->CharWidth(aLabel[aIndexInLine]);
+			aIndexInLine++;
+		}
+		else
+		{
+			SexyString aLine = aLabel.substr(aIndexStart, aIndexInLine - aIndexStart);
 			aLineWidth = 0;
-			aLineStart = aCharEnd;
-			aBreakDrawLen = -1;
-			aPrevChar = 0;
-			continue;
-		}
+			theLines.push_back(aLine);
 
-		aLineWidth += FONT_PICO129->CharWidth(aChar);
-
-		if (aChar == U' ')
-		{
-			aBreakDrawLen = aCharStart - aLineStart;
-			aBreakResumePos = aCharEnd;
-			if (aLineWidth >= mGetsLinesWidth)
+			if (aIndexInLine < aLabel.size() && aLabel[aIndexInLine] == '\n')
 			{
-				theLines.push_back(mLabel.substr(aLineStart, aBreakDrawLen));
-				aCurPos = aBreakResumePos;
-				while (aCurPos < mLabel.size() && mLabel[aCurPos] == ' ')
-					aCurPos++;
-				aLineStart = aCurPos;
-				aLineWidth = 0;
-				aBreakDrawLen = -1;
-				aPrevChar = 0;
-				continue;
+				aIndexInLine++;
 			}
-		}
-		else if (Sexy::IsAutoBreakChar(aChar) &&
-			!Sexy::IsClosingPunctuation(aChar) &&
-			aCharStart > aLineStart &&
-			!Sexy::IsOpeningPunctuation(aPrevChar))
-		{
-			aBreakDrawLen = aCharStart - aLineStart;
-			aBreakResumePos = aCharStart;
-			if (aLineWidth >= mGetsLinesWidth)
+			while (aIndexInLine < aLabel.size() && aLabel[aIndexInLine] == ' ')
 			{
-				theLines.push_back(mLabel.substr(aLineStart, aBreakDrawLen));
-				aCurPos = aBreakResumePos;
-				aLineStart = aCurPos;
-				aLineWidth = 0;
-				aBreakDrawLen = -1;
-				aPrevChar = 0;
-				continue;
+				aIndexInLine++;
 			}
-		}
-		aPrevChar = aChar;
-	}
 
-	if (aLineStart < mLabel.size())
-	{
-		theLines.push_back(mLabel.substr(aLineStart));
+			aIndexStart = aIndexInLine;
+		}
 	}
 }
 
 void ToolTipWidget::CalculateSize()
 {
-	std::vector<std::string> aLines;
+	std::vector<SexyString> aLines;
 
-	int aTitleWidth = FONT_TINYBOLD->StringWidth(mTitle);
-	int aWarningWidth = FONT_PICO129->StringWidth(mWarningText);
-	int aMaxWidth = std::max(aTitleWidth, aWarningWidth);
+	SexyString aTitle = TodStringTranslate(mTitle);
+	SexyString aWarningText = TodStringTranslate(mWarningText);
+	Font* aTitleFont = USE_OLD_STYLE_TOOLTIP ? FONT_TINYBOLD : FONT_BRIANNETOD16;
+	Font* aFont = USE_OLD_STYLE_TOOLTIP ? FONT_PICO129 : FONT_BRIANNETOD12;
+	int aTitleWidth = aTitleFont->StringWidth(aTitle);
+	int aWarningWidth = aFont->StringWidth(aWarningText);
+	int aMaxWidth = max(aTitleWidth, aWarningWidth);
 
-	mGetsLinesWidth = std::max(aMaxWidth - 30, 100);
-	if (mMaxLinesWidth > 0)
-		mGetsLinesWidth = std::min(mGetsLinesWidth, mMaxLinesWidth);
+	mGetsLinesWidth = max(aMaxWidth - 30, 100);
 	GetLines(aLines);
 
-	for (size_t i = 0; i < aLines.size(); i++)
+	for (int i = 0; i < aLines.size(); i++)
 	{
-		int aLineWidth = FONT_PICO129->StringWidth(aLines[i]);
-		aMaxWidth = std::max(aMaxWidth, aLineWidth);
+		int aLineWidth = aFont->StringWidth(aLines[i]);
+		aMaxWidth = max(aMaxWidth, aLineWidth);
 	}
 
 	int aHeight = 6;
-	if (!mTitle.empty())
+	if (!aTitle.empty())
 	{
-		aHeight = FONT_TINYBOLD->GetAscent() + 8;
+		aHeight = aTitleFont->GetAscent() + 8;
 	}
-	if (!mWarningText.empty())
+	if (!aWarningText.empty())
 	{
-		aHeight += FONT_TINYBOLD->GetAscent() + 2;
+		aHeight += aFont->GetAscent() + 2;
 	}
-	aHeight += aLines.size() * FONT_PICO129->GetAscent();
+	aHeight += aLines.size() * aFont->GetAscent();
 
 	mWidth = aMaxWidth + 10;
 	mHeight = aHeight + aLines.size() * 2 - 2;
 }
 
-void ToolTipWidget::SetLabel(std::string_view theLabel)
+void ToolTipWidget::SetLabel(const SexyString& theLabel)
 {
-	mLabel = PvzpStringTranslate(theLabel);
+	mLabel = theLabel;
 	CalculateSize();
 }
 
-void ToolTipWidget::SetTitle(std::string_view theTitle)
+void ToolTipWidget::SetTitle(const SexyString& theTitle)
 {
-	mTitle = PvzpStringTranslate(theTitle);
+	mTitle = theTitle;
 	CalculateSize();
 }
 
-void ToolTipWidget::SetWarningText(std::string_view theWarningText)
+void ToolTipWidget::SetWarningText(const SexyString& theWarningText)
 {
-	mWarningText = PvzpStringTranslate(theWarningText);
+	mWarningText = theWarningText;
 	CalculateSize();
 }
 
@@ -186,7 +128,7 @@ void ToolTipWidget::Draw(Graphics* g)
 	}
 	if (mMinLeft - g->mTransX > aPosX)  // aPosX + g->mTransX < mMinLeft
 	{
-		aPosX = mMinLeft - static_cast<int>(g->mTransX);
+		aPosX = mMinLeft - (int)g->mTransX;
 	}
 	else if (aPosX + mWidth + g->mTransX > BOARD_WIDTH)
 	{
@@ -196,11 +138,11 @@ void ToolTipWidget::Draw(Graphics* g)
 	int aPosY = mY;
 	if (-g->mTransY > aPosY)  // aPosY + g->mTransY > 0
 	{
-		aPosY = static_cast<int>(-g->mTransY);
+		aPosY = (int)-g->mTransY;
 	}
 	else if (mMaxBottom < mY + mHeight + g->mTransY)
 	{
-		aPosY = mMaxBottom - static_cast<int>(g->mTransY) - mHeight;
+		aPosY = mMaxBottom - (int)g->mTransY - mHeight;
 	}
 
 	g->SetColor(Color(255, 255, 200, 255));
@@ -209,18 +151,22 @@ void ToolTipWidget::Draw(Graphics* g)
 	g->DrawRect(aPosX, aPosY, mWidth - 1, mHeight - 1);
 	aPosY++;
 
-	if (!mTitle.empty())
+	Font* aTitleFont = USE_OLD_STYLE_TOOLTIP ? FONT_TINYBOLD : FONT_BRIANNETOD16;
+	SexyString aTitle = TodStringTranslate(mTitle);
+	if (!aTitle.empty())
 	{
-		g->SetFont(FONT_TINYBOLD);
-		g->DrawString(mTitle, aPosX + (mWidth - FONT_TINYBOLD->StringWidth(mTitle)) / 2, aPosY + FONT_TINYBOLD->GetAscent());
-		aPosY += FONT_TINYBOLD->GetAscent() + 2;
+		g->SetFont(aTitleFont);
+		g->DrawString(aTitle, aPosX + (mWidth - aTitleFont->StringWidth(aTitle)) / 2, aPosY + aTitleFont->GetAscent());
+		aPosY += aTitleFont->GetAscent() + 2;
 	}
 
-	if (!mWarningText.empty())
+	Font* aWarningFont = USE_OLD_STYLE_TOOLTIP ? FONT_PICO129 : FONT_BRIANNETOD12;
+	SexyString aWarningText = TodStringTranslate(mWarningText);
+	if (!aWarningText.empty())
 	{
-		g->SetFont(FONT_PICO129);
-		int x = aPosX + (mWidth - FONT_PICO129->StringWidth(mWarningText)) / 2;
-		int y = aPosY + FONT_PICO129->GetAscent();
+		g->SetFont(aWarningFont);
+		int x = aPosX + (mWidth - aWarningFont->StringWidth(aWarningText)) / 2;
+		int y = aPosY + aWarningFont->GetAscent();
 
 		Color aWarningColor(255, 0, 0);
 		if (mWarningFlashCounter > 0 && mWarningFlashCounter % 20 < 10)
@@ -229,20 +175,21 @@ void ToolTipWidget::Draw(Graphics* g)
 		}
 
 		g->SetColor(aWarningColor);
-		g->DrawString(mWarningText, x, y);
+		g->DrawString(aWarningText, x, y);
 		g->SetColor(Color::Black);
 
-		aPosY += FONT_PICO129->GetAscent() + 2;
+		aPosY += aWarningFont->GetAscent() + 2;
 	}
 
-	std::vector<std::string> aLines;
+	std::vector<SexyString> aLines;
 	GetLines(aLines);
 
-	g->SetFont(FONT_PICO129);
-	for (size_t i = 0; i < aLines.size(); i++)
+	Font* aFont = USE_OLD_STYLE_TOOLTIP ? FONT_PICO129 : FONT_BRIANNETOD12;
+	g->SetFont(aFont);
+	for (int i = 0; i < aLines.size(); i++)
 	{
-		std::string aLine = aLines[i];
-		g->DrawString(aLine, aPosX + (mWidth - FONT_PICO129->StringWidth(aLine)) / 2, aPosY + FONT_PICO129->GetAscent());
-		aPosY += FONT_PICO129->GetAscent() + 2;
+		SexyString aLine = aLines[i];
+		g->DrawString(aLine, aPosX + (mWidth - aFont->StringWidth(aLine)) / 2, aPosY + aFont->GetAscent());
+		aPosY += aFont->GetAscent() + 2;
 	}
 }

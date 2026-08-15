@@ -1,27 +1,5 @@
-/*
- * Copyright (C) 2026 Zhou Qiankang <wszqkzqk@qq.com>
- *
- * SPDX-License-Identifier: LGPL-3.0-or-later
- *
- * This file is part of PvZ-Portable.
- *
- * PvZ-Portable is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * PvZ-Portable is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with PvZ-Portable. If not, see <https://www.gnu.org/licenses/>.
- */
-
 #include "Coin.h"
 #include "Board.h"
-#include "LawnCommon.h"
 #include "Plant.h"
 #include "Zombie.h"
 #include "GridItem.h"
@@ -41,38 +19,29 @@
 #include "System/PlayerInfo.h"
 #include "Widget/GameButton.h"
 #include "Widget/StoreScreen.h"
-#include "../PvzpLib/PvzpDebug.h"
-#include "../PvzpLib/PvzpFoley.h"
-#include "../PvzpLib/PvzpCommon.h"
-#include "graphics/Font.h"
-#include "../PvzpLib/Reanimator.h"
-#include "misc/Debug.h"
-#include "misc/MTRand.h"
-#include "../PvzpLib/PvzpParticle.h"
-#include "../PvzpLib/EffectSystem.h"
-#include "../PvzpLib/PvzpStringFile.h"
-#include "widget/WidgetManager.h"
-#include "Widget/AchievementsScreen.h"
-#include <algorithm>
+#include "../Sexy.TodLib/TodDebug.h"
+#include "../Sexy.TodLib/TodFoley.h"
+#include "../Sexy.TodLib/TodCommon.h"
+#include "../SexyAppFramework/Font.h"
+#include "../Sexy.TodLib/Reanimator.h"
+#include "../SexyAppFramework/Debug.h"
+#include "../SexyAppFramework/MTRand.h"
+#include "../Sexy.TodLib/TodParticle.h"
+#include "../Sexy.TodLib/TodStringFile.h"
+#include "../SexyAppFramework/WidgetManager.h"
+#include "System/ReanimationLawn.h"
+#include "../SexyAppFramework/MemoryImage.h"
 
-constexpr const int BEGHOULED_WINNING_SCORE = 75;
-constexpr const int SLOT_MACHINE_WINNING_SCORE = 2000;
-constexpr const int ZOMBIQUARIUM_WINNING_SCORE = 1000;
-constexpr const int I_ZOMBIE_WINNING_SCORE = 5;
-constexpr const int MAX_PORTALS = 4;
-constexpr const int MAX_SQUIRRELS = 7;
-constexpr const int MAX_SCARY_POTS = 54;
-constexpr const int STORM_FLASH_TIME = 150;
-
-int gZombieWaves[NUM_LEVELS] = {
-	4,  6,  8,  10, 8,  10, 20, 10, 20, 20,
-	10, 20, 10, 20, 10, 10, 20, 10, 20, 20,
-	10, 20, 20, 30, 20, 20, 30, 20, 30, 30,
-	10, 20, 10, 20, 20, 10, 20, 10, 20, 20,
-	10, 20, 20, 30, 20, 20, 30, 20, 30, 30,
+int gZombieWaves[NUM_LEVELS] = {  
+	10,  10,  10,  20, 10,  20, 30, 20, 40, 30,
+	7, 20, 20, 30, 15, 20, 30, 15, 30, 20,
+	20, 30, 30, 40, 20, 30, 40, 30, 50, 40,
+	15, 25, 15, 35, 25, 15, 25, 15, 40, 25,
+	20, 20, 20, 40, 20, 20, 40, 30, 60, 30,
+	15, 25, 25, 35, 25, 25, 35, 25, 45, 35,
 };
 
-ZombieAllowedLevels gZombieAllowedLevels[NUM_ZOMBIE_TYPES] = {
+ZombieAllowedLevels gZombieAllowedLevels[NUM_ZOMBIE_TYPES] = {  
 	{ ZOMBIE_NORMAL,
 		{
 			1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
@@ -80,10 +49,12 @@ ZombieAllowedLevels gZombieAllowedLevels[NUM_ZOMBIE_TYPES] = {
 			1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 			1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 			1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+			1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 		}
 	},
-	{ ZOMBIE_FLAG,
+	{ ZOMBIE_FLAG, 
 		{
+			1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 			1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 			1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 			1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
@@ -95,6 +66,7 @@ ZombieAllowedLevels gZombieAllowedLevels[NUM_ZOMBIE_TYPES] = {
 		{
 			0, 0, 1, 1, 1, 1, 1, 1, 1, 1,
 			0, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+			1, 1, 1, 1, 1, 1, 0, 1, 1, 1,
 			1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 			1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 			1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
@@ -107,15 +79,17 @@ ZombieAllowedLevels gZombieAllowedLevels[NUM_ZOMBIE_TYPES] = {
 			0, 0, 0, 1, 0, 0, 0, 0, 1, 0,
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
 		}
 	},
 	{ ZOMBIE_PAIL,
 		{
 			0, 0, 0, 0, 0, 0, 0, 1, 1, 1,
 			0, 1, 0, 0, 1, 0, 0, 0, 0, 0,
-			0, 1, 0, 1, 0, 0, 1, 0, 1, 1,
+			0, 1, 0, 1, 0, 0, 0, 0, 1, 1,
 			0, 0, 0, 0, 0, 0, 1, 0, 1, 1,
 			0, 1, 0, 0, 1, 0, 0, 0, 1, 1,
+			0, 1, 0, 0, 0, 0, 0, 0, 1, 0,
 		}
 	},
 	{ ZOMBIE_NEWSPAPER,
@@ -125,6 +99,7 @@ ZombieAllowedLevels gZombieAllowedLevels[NUM_ZOMBIE_TYPES] = {
 			0, 1, 0, 1, 0, 0, 0, 0, 0, 0,
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 1, 0, 0, 0, 0, 1, 0,
 		}
 	},
 	{ ZOMBIE_DOOR,
@@ -134,6 +109,7 @@ ZombieAllowedLevels gZombieAllowedLevels[NUM_ZOMBIE_TYPES] = {
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
 		}
 	},
 	{ ZOMBIE_FOOTBALL,
@@ -143,12 +119,14 @@ ZombieAllowedLevels gZombieAllowedLevels[NUM_ZOMBIE_TYPES] = {
 			0, 1, 0, 0, 1, 0, 0, 0, 0, 0,
 			0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
 			0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 1, 0, 1, 0,
 		}
 	},
 	{ ZOMBIE_DANCER,
 		{
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			0, 0, 0, 0, 0, 0, 0, 1, 1, 1,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -160,6 +138,7 @@ ZombieAllowedLevels gZombieAllowedLevels[NUM_ZOMBIE_TYPES] = {
 			0, 0, 0, 0, 0, 0, 0, 1, 1, 1,
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 		}
 	},
@@ -168,7 +147,8 @@ ZombieAllowedLevels gZombieAllowedLevels[NUM_ZOMBIE_TYPES] = {
 		{
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 1, 1, 1, 0, 1, 0, 0, 1,
+			0, 0, 1, 1, 1, 0, 0, 0, 0, 1,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		}
@@ -177,18 +157,20 @@ ZombieAllowedLevels gZombieAllowedLevels[NUM_ZOMBIE_TYPES] = {
 		{
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 1, 1, 0, 1, 1,
+			0, 0, 0, 0, 0, 1, 0, 0, 1, 1,
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
 		}
 	},
 	{ ZOMBIE_BOBSLED,
 		{
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 1, 1, 0, 1, 1,
+			0, 0, 0, 0, 0, 1, 0, 0, 1, 1,
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
 		}
 	},
 	{ ZOMBIE_DOLPHIN_RIDER,
@@ -197,6 +179,7 @@ ZombieAllowedLevels gZombieAllowedLevels[NUM_ZOMBIE_TYPES] = {
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			0, 0, 0, 0, 0, 0, 0, 1, 1, 1,
 			0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		}
 	},
@@ -207,6 +190,7 @@ ZombieAllowedLevels gZombieAllowedLevels[NUM_ZOMBIE_TYPES] = {
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			1, 1, 0, 0, 0, 0, 1, 0, 0, 1,
 			0, 0, 0, 0, 0, 0, 0, 0, 1, 1,
+			0, 1, 0, 0, 0, 0, 0, 0, 1, 0,
 		}
 	},
 	{ ZOMBIE_BALLOON,
@@ -216,6 +200,7 @@ ZombieAllowedLevels gZombieAllowedLevels[NUM_ZOMBIE_TYPES] = {
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			0, 0, 1, 1, 0, 0, 0, 0, 1, 1,
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
 		}
 	},
 	{ ZOMBIE_DIGGER,
@@ -224,6 +209,7 @@ ZombieAllowedLevels gZombieAllowedLevels[NUM_ZOMBIE_TYPES] = {
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			0, 0, 0, 0, 0, 1, 1, 0, 0, 1,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		}
 	},
@@ -234,9 +220,10 @@ ZombieAllowedLevels gZombieAllowedLevels[NUM_ZOMBIE_TYPES] = {
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			0, 0, 0, 0, 0, 0, 0, 1, 1, 1,
 			0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
 		}
 	},
-	{ ZOMBIE_YETI, {0} },
+	{ ZOMBIE_YETI, {}},
 	{ ZOMBIE_BUNGEE,
 		{
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -244,6 +231,7 @@ ZombieAllowedLevels gZombieAllowedLevels[NUM_ZOMBIE_TYPES] = {
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			1, 1, 0, 0, 0, 0, 1, 0, 1, 1,
+			0, 1, 0, 0, 0, 0, 0, 0, 1, 0,
 		}
 	},
 	{ ZOMBIE_LADDER,
@@ -253,6 +241,7 @@ ZombieAllowedLevels gZombieAllowedLevels[NUM_ZOMBIE_TYPES] = {
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			0, 0, 1, 1, 1, 0, 1, 0, 1, 1,
+			0, 0, 0, 0, 0, 0, 1, 0, 1, 0,
 		}
 	},
 	{ ZOMBIE_CATAPULT,
@@ -262,6 +251,7 @@ ZombieAllowedLevels gZombieAllowedLevels[NUM_ZOMBIE_TYPES] = {
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			0, 0, 0, 0, 0, 1, 1, 0, 1, 1,
+			0, 0, 0, 0, 1, 0, 0, 0, 1, 0,
 		}
 	},
 	{ ZOMBIE_GARGANTUAR,
@@ -271,6 +261,7 @@ ZombieAllowedLevels gZombieAllowedLevels[NUM_ZOMBIE_TYPES] = {
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			0, 0, 0, 0, 0, 0, 0, 1, 1, 1,
+			0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
 		}
 	},
 	{ ZOMBIE_IMP,
@@ -280,19 +271,65 @@ ZombieAllowedLevels gZombieAllowedLevels[NUM_ZOMBIE_TYPES] = {
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 			0, 0, 0, 0, 0, 0, 0, 1, 1, 1,
+			0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
 		}
 	},
-	{ ZOMBIE_BOSS, {0} },
-	{ ZOMBIE_PEA_HEAD, {0} },
-	{ ZOMBIE_WALLNUT_HEAD, {0} },
-	{ ZOMBIE_JALAPENO_HEAD, {0} },
-	{ ZOMBIE_GATLING_HEAD, {0} },
-	{ ZOMBIE_SQUASH_HEAD, {0} },
-	{ ZOMBIE_TALLNUT_HEAD, {0} },
-	{ ZOMBIE_REDEYE_GARGANTUAR, {0} },
+	{ ZOMBIE_BRICK,
+		{
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			1, 1, 0, 0, 1, 0, 0, 0, 1, 0,
+		}
+	},
+	{ ZOMBIE_BUG,
+		{
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 1, 1, 1, 0, 0, 0, 1, 0,
+		}
+	},
+	{ ZOMBIE_GIGA_FOOTBALL,
+		{
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 1, 1, 0, 1, 0,
+		}
+	},
+	{ ZOMBIE_BLEUEYE_GARGANTUAR,
+		{
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0, 0, 0, 0, 1, 1, 0,
+		}
+	},
+	{ ZOMBIE_BOSS, {}},
+	{ ZOMBIE_REDEYE_GARGANTUAR , {} },
+	{ ZOMBIE_NINJA, {} },
+	{ ZOMBIE_EXA_GARGANTUAR, {} },
+	{ ZOMBIE_PEA_HEAD, {}},
+	{ ZOMBIE_WALLNUT_HEAD, {}},
+	{ ZOMBIE_JALAPENO_HEAD, {}},
+	{ ZOMBIE_GATLING_HEAD, {}},
+	{ ZOMBIE_SQUASH_HEAD, {}},
+	{ ZOMBIE_TALLNUT_HEAD, {}},
+	{ ZOMBIE_SUNDYEDITION, {} },
+	{ ZOMBIE_FLY, {} },
+	{ ZOMBIE_COCOON, {} },
 };
 
-SeedType gArtChallengeWallnut[MAX_GRID_SIZE_Y][MAX_GRID_SIZE_X] = {
+SeedType gArtChallengeWallnut[MAX_GRID_SIZE_Y][MAX_GRID_SIZE_X] = {  
 	{SEED_NONE,     SEED_NONE,      SEED_NONE,      SEED_NONE,      SEED_WALLNUT,   SEED_WALLNUT,   SEED_WALLNUT,   SEED_NONE,      SEED_NONE},
 	{SEED_NONE,     SEED_NONE,      SEED_NONE,      SEED_WALLNUT,   SEED_NONE,      SEED_NONE,      SEED_NONE,      SEED_WALLNUT,   SEED_NONE},
 	{SEED_NONE,     SEED_NONE,      SEED_NONE,      SEED_WALLNUT,   SEED_NONE,      SEED_NONE,      SEED_NONE,      SEED_WALLNUT,   SEED_NONE},
@@ -301,7 +338,7 @@ SeedType gArtChallengeWallnut[MAX_GRID_SIZE_Y][MAX_GRID_SIZE_X] = {
 	{SEED_NONE,     SEED_NONE,      SEED_NONE,      SEED_NONE,      SEED_NONE,      SEED_NONE,      SEED_NONE,      SEED_NONE,      SEED_NONE}
 };
 
-SeedType gArtChallengeSunFlower[MAX_GRID_SIZE_Y][MAX_GRID_SIZE_X] = {
+SeedType gArtChallengeSunFlower[MAX_GRID_SIZE_Y][MAX_GRID_SIZE_X] = {  
 	{SEED_NONE,     SEED_NONE,      SEED_STARFRUIT, SEED_STARFRUIT, SEED_STARFRUIT, SEED_NONE,      SEED_NONE,      SEED_NONE,      SEED_NONE},
 	{SEED_NONE,     SEED_STARFRUIT, SEED_WALLNUT,   SEED_WALLNUT,   SEED_WALLNUT,   SEED_STARFRUIT, SEED_NONE,      SEED_NONE,      SEED_NONE},
 	{SEED_NONE,     SEED_NONE,      SEED_STARFRUIT, SEED_STARFRUIT, SEED_STARFRUIT, SEED_NONE,      SEED_NONE,      SEED_NONE,      SEED_NONE},
@@ -310,7 +347,7 @@ SeedType gArtChallengeSunFlower[MAX_GRID_SIZE_Y][MAX_GRID_SIZE_X] = {
 	{SEED_NONE,     SEED_NONE,      SEED_NONE,      SEED_NONE,      SEED_NONE,      SEED_NONE,      SEED_NONE,      SEED_NONE,      SEED_NONE}
 };
 
-SeedType gArtChallengeStarFruit[MAX_GRID_SIZE_Y][MAX_GRID_SIZE_X] = {
+SeedType gArtChallengeStarFruit[MAX_GRID_SIZE_Y][MAX_GRID_SIZE_X] = {  
 	{SEED_NONE,     SEED_NONE,      SEED_NONE,      SEED_STARFRUIT, SEED_NONE,      SEED_NONE,      SEED_NONE,      SEED_NONE,      SEED_NONE},
 	{SEED_NONE,     SEED_NONE,      SEED_NONE,      SEED_STARFRUIT, SEED_STARFRUIT, SEED_NONE,      SEED_NONE,      SEED_NONE,      SEED_NONE},
 	{SEED_NONE,     SEED_STARFRUIT, SEED_STARFRUIT, SEED_STARFRUIT, SEED_STARFRUIT, SEED_STARFRUIT, SEED_STARFRUIT, SEED_NONE,      SEED_NONE},
@@ -341,10 +378,11 @@ Challenge::Challenge()
 	mBeghouledMatchesThisMove = 0;
 	mRainCounter = 0;
 	mTreeOfWisdomTalkIndex = 0;
+	mPlantsRemaining = 5;
 	for (int i = 0; i < 6; i++)
 		mReanimClouds[i] = REANIMATIONID_NULL;
 	memset(mBeghouledEated, 0, sizeof(mBeghouledEated));
-	for (int i = 0; i < static_cast<int>(BeghouledUpgrade::NUM_BEGHOULED_UPGRADES); i++)
+	for (int i = 0; i < (int)BeghouledUpgrade::NUM_BEGHOULED_UPGRADES; i++)
 		mBeghouledPurcasedUpgrade[i] = false;
 
 	if (mApp->mBoard && mApp->mGameMode == GAMEMODE_CHALLENGE_SLOT_MACHINE)
@@ -364,19 +402,29 @@ void Challenge::LoadBeghouledBoardState(BeghouledBoardState* theBoardState)
 		for (int j = 0; j < MAX_GRID_SIZE_Y; j++)
 			theBoardState->mSeedType[i][j] = SEED_NONE;
 
-	for (Plant* aPlant : mBoard->mPlants)
-		if (!aPlant->mDead)
-			theBoardState->mSeedType[aPlant->mPlantCol][aPlant->mRow] = aPlant->mSeedType;
+	Plant* aPlant = nullptr;
+	while (mBoard->IteratePlants(aPlant))
+		theBoardState->mSeedType[aPlant->mPlantCol][aPlant->mRow] = aPlant->mSeedType;
 }
 
 void Challenge::InitLevel()
 {
+	if (mApp->mGameMode == GAMEMODE_CHALLENGE_RAINING_SEEDS || mApp->mGameMode == GAMEMODE_CHALLENGE_RAINING_SEEDS_2)
+	{
+		mChallengeStateCounter = 100;
+		mApp->PlayFoley(FOLEY_RAIN);
+	}
 	if (mApp->mGameMode == GAMEMODE_CHALLENGE_RAINING_SEEDS)
 	{
 		mChallengeStateCounter = 100;
 		mApp->PlayFoley(FOLEY_RAIN);
 	}
-	if (mApp->IsStormyNightLevel())
+	if (mApp->mGameMode == GAMEMODE_CHALLENGE_ADV2_1)
+	{
+		mChallengeStateCounter = 100;
+		mApp->PlayFoley(FOLEY_RAIN);
+	}
+	if (mApp->IsStormyNightLevel() || (mApp->IsAdventureMode() && mBoard && mBoard->mLevel == 17))
 	{
 		mChallengeState = STATECHALLENGE_STORM_FLASH_2;
 		mChallengeStateCounter = 100;
@@ -390,10 +438,47 @@ void Challenge::InitLevel()
 		mBoard->mSeedBank->AddSeed(SEED_ICESHROOM);
 		mConveyorBeltCounter = 1000;
 	}
+	if (mApp->IsAdventureMode() && mBoard->mLevel == 47)
+	{
+		int targetRows[3] = { 0, 2, 4 };
+		int col = 6;
+		for (int i = 0; i < 3; i++)
+		{
+			int row = targetRows[i];
+			mBoard->NewPlant(col, row, SeedType::SEED_SUNFLOWER, SeedType::SEED_NONE);
+			GridItem* aProtectItem = mBoard->mGridItems.DataArrayAlloc();
+			aProtectItem->mGridItemType = GridItemType::GRIDITEM_PROTECT_PLANT;
+			aProtectItem->mGridX = col;
+			aProtectItem->mGridY = row;
+			aProtectItem->mPosX = mBoard->GridToPixelX(col, row);
+			aProtectItem->mPosY = mBoard->GridToPixelY(col, row);
+			aProtectItem->mRenderOrder = Board::MakeRenderOrder(RenderLayer::RENDER_LAYER_GROUND, row, 2);
+		}
+	}
+	if (mApp->mGameMode == GameMode::GAMEMODE_CHALLENGE_PROTECT_PLANTS)
+	{
+		for (int row = 0; row < 5; row++)
+		{
+			Plant* p = mBoard->NewPlant(0, row, SeedType::SEED_POTATOMINE, SeedType::SEED_NONE);
+			p->mStateCountdown = 0; 
+			GridItem* aProtectItem = mBoard->mGridItems.DataArrayAlloc();
+			aProtectItem->mGridItemType = GridItemType::GRIDITEM_PROTECT_PLANT;
+			aProtectItem->mGridX = 0;
+			aProtectItem->mGridY = row;
+			aProtectItem->mPosX = mBoard->GridToPixelX(0, row);
+			aProtectItem->mPosY = mBoard->GridToPixelY(0, row);
+			aProtectItem->mRenderOrder = Board::MakeRenderOrder(RenderLayer::RENDER_LAYER_GROUND, row, 2);
+		}
+	}
+	if (mApp->IsAdventureMode() && mBoard->mLevel == 17)
+	{
+		mBoard->NewPlant(2, 2, SeedType::SEED_PLANTERN, SeedType::SEED_NONE);
+		mBoard->NewPlant(6, 2, SeedType::SEED_PLANTERN, SeedType::SEED_NONE);
+	}
 	if (mApp->mGameMode == GAMEMODE_CHALLENGE_ZEN_GARDEN)
 	{
 		mApp->mZenGarden->mGardenType = GARDEN_MAIN;
-		mApp->mZenGarden->ZenGardenInitLevel();
+		mApp->mZenGarden->ZenGardenInitLevel(false);
 	}
 	if (mApp->mGameMode == GAMEMODE_CHALLENGE_COLUMN)
 	{
@@ -438,21 +523,47 @@ void Challenge::InitLevel()
 
 void Challenge::StartLevel()
 {
+	if (mApp->IsFootballLevel())
+	{
+		// 1. ≈Ìﬁ«› „ÊÃ«  «·“Ê„»Ì
+		mBoard->mZombieCountDown = 0;
+		mBoard->mZombieCountDownStart = 0;
+
+		// 2. “—«⁄… 5 Ãœ«— ÃÊ“ ›Ì «·⁄„Êœ 0 (Œÿ «·œ›«⁄ «·√ŒÌ—)
+		for (int i = 0; i <= 4; i++)
+		{
+			mBoard->AddPlant(0, i, SeedType::SEED_WALLNUT, SeedType::SEED_NONE);
+		}
+
+		// 3. “—«⁄… 5 ﬁ»Ê— ›Ì «·⁄„Êœ 8 (√Âœ«› «·“Ê„»Ì)
+		for (int i = 0; i <= 4; i++)
+		{
+			mBoard->AddAGraveStone(8, i);
+		}
+
+		// 4. “—«⁄… ‰» … «··«⁄» («·„Ÿ·…) ›Ì («·⁄„Êœ 2° «·”ÿ— 2) 
+		mBoard->AddPlant(2, 2, SeedType::SEED_UMBRELLA, SeedType::SEED_NONE);
+
+		// 5. ≈ÿ·«ﬁ «·ﬂ—… ﬂ„ﬁ–Ê› ÕﬁÌﬁÌ (Projectile) ›Ì „‰ ’› «·„·⁄» »œ·« „‰ GridItem
+		Projectile* aBall = mBoard->AddProjectile(mBoard->GridToPixelX(4, 2), mBoard->GridToPixelY(4, 2), mBoard->MakeRenderOrder(RenderLayer::RENDER_LAYER_PROJECTILE, 2, 0), 2, ProjectileType::PROJECTILE_BASKETBALL);
+		aBall->mVelX = -4.5f; // —„Ì «·ﬂ—… ‰ÕÊ «··«⁄» ›Ì «·»œ«Ì…
+		aBall->mVelY = RandRangeFloat(-2.0f, 2.0f); // ≈÷«›… „Ì·«‰ ⁄‘Ê«∆Ì
+
+		// 6. «” œ⁄«¡ “Ê„»Ì «·—Ì«÷Ì (Õ«—” «·„—„Ï)
+		Zombie* aZombie = mBoard->AddZombieInRow(ZombieType::ZOMBIE_FOOTBALL, 2, 0);
+		if (aZombie)
+		{
+			aZombie->mPosX = mBoard->GridToPixelX(7, 2);
+			aZombie->mX = (int)aZombie->mPosX;
+		}
+	}
 	if (mApp->IsWhackAZombieLevel())
 	{
 		mBoard->mCursorObject->mCursorType = CURSOR_TYPE_HAMMER;
 		mBoard->mZombieCountDown = 200;
 		mBoard->mZombieCountDownStart = mBoard->mZombieCountDown;
-
-		ReanimatorEnsureDefinitionLoaded(ReanimationType::REANIM_HAMMER, true);
-		mApp->RemoveReanimation(mBoard->mCursorObject->mReanimCursorID);
-		Reanimation* aHammerReanim = mApp->AddReanimation(-25.0f, 16.0f, 0, ReanimationType::REANIM_HAMMER);
-		aHammerReanim->mIsAttachment = true;
-		aHammerReanim->PlayReanim("anim_whack_zombie", ReanimLoopType::REANIM_PLAY_ONCE_AND_HOLD, 0, 24.0f);
-		aHammerReanim->mAnimTime = 1.0f;
-		mBoard->mCursorObject->mReanimCursorID = mApp->ReanimationGetID(aHammerReanim);
 	}
-	if (mApp->IsStormyNightLevel())
+	if (mApp->IsStormyNightLevel() || (mApp->IsAdventureMode() && mBoard->mLevel == 17))
 	{
 		mChallengeState = STATECHALLENGE_STORM_FLASH_1;
 		mChallengeStateCounter = 400;
@@ -464,8 +575,21 @@ void Challenge::StartLevel()
 		{
 			if (mBoard->mPlantRow[i] != PLANTROW_POOL)
 			{
-				mBoard->mIceMinX[i] = 400;
+				mBoard->mIceMinX[i] = 400 + BOARD_ADDITIONAL_WIDTH;
 				mBoard->mIceTimer[i] = 0x7FFFFFFF;
+			}
+		}
+	}
+	if (aGameMode == GameMode::GAMEMODE_CHALLENGE_ADV2_2)
+	{
+		for (int aCol = 0; aCol <= 3; aCol++) 
+		{
+			for (int aRow = 0; aRow <= 4; aRow++)
+			{
+				if (mBoard->mGridSquareType[aCol][aRow] != GRIDSQUARE_NONE)
+				{
+					mBoard->AddACrater(aCol, aRow);
+				}
 			}
 		}
 	}
@@ -493,27 +617,27 @@ void Challenge::StartLevel()
 	}
 	if (mApp->IsSurvivalMode() && mSurvivalStage == 0)
 	{
-		std::string aMessage =
-			mApp->IsSurvivalNormal(aGameMode) ? PvzpReplaceNumberString("[ADVICE_SURVIVE_FLAGS]", "{FLAGS}", SURVIVAL_NORMAL_FLAGS) :
-			mApp->IsSurvivalHard(aGameMode) ? PvzpReplaceNumberString("[ADVICE_SURVIVE_FLAGS]", "{FLAGS}", SURVIVAL_HARD_FLAGS) :
-			"[ADVICE_SURVIVE_ENDLESS]";
+		SexyString aMessage =
+			mApp->IsSurvivalNormal(aGameMode) ? TodReplaceNumberString(_S("[ADVICE_SURVIVE_FLAGS]"), _S("{FLAGS}"), SURVIVAL_NORMAL_FLAGS) :
+			mApp->IsSurvivalHard(aGameMode) ? TodReplaceNumberString(_S("[ADVICE_SURVIVE_FLAGS]"), _S("{FLAGS}"), SURVIVAL_HARD_FLAGS) : 
+			_S("[ADVICE_SURVIVE_ENDLESS]");
 		mBoard->DisplayAdvice(aMessage, MESSAGE_STYLE_HINT_FAST, ADVICE_SURVIVE_FLAGS);
 	}
 	if (aGameMode == GAMEMODE_CHALLENGE_LAST_STAND && mSurvivalStage == 0)
 	{
-		mBoard->DisplayAdvice(PvzpReplaceNumberString("[ADVICE_SURVIVE_FLAGS]", "{FLAGS}", LAST_STAND_FLAGS), MESSAGE_STYLE_BIG_MIDDLE_FAST, ADVICE_SURVIVE_FLAGS);
+		mBoard->DisplayAdvice(TodReplaceNumberString(_S("[ADVICE_SURVIVE_FLAGS]"), _S("{FLAGS}"), LAST_STAND_FLAGS), MESSAGE_STYLE_BIG_MIDDLE_FAST, ADVICE_SURVIVE_FLAGS);
 	}
 	if (aGameMode == GAMEMODE_CHALLENGE_ART_CHALLENGE_WALLNUT)
 	{
-		mBoard->DisplayAdvice("[ADVICE_FILL_IN_WALLNUTS]", MESSAGE_STYLE_HINT_FAST, ADVICE_NONE);
+		mBoard->DisplayAdvice(_S("[ADVICE_FILL_IN_WALLNUTS]"), MESSAGE_STYLE_HINT_FAST, ADVICE_NONE);
 	}
 	if (aGameMode == GAMEMODE_CHALLENGE_ART_CHALLENGE_SUNFLOWER)
 	{
-		mBoard->DisplayAdvice("[ADVICE_FILL_IN_SPACES]", MESSAGE_STYLE_HINT_FAST, ADVICE_NONE);
+		mBoard->DisplayAdvice(_S("[ADVICE_FILL_IN_SPACES]"), MESSAGE_STYLE_HINT_FAST, ADVICE_NONE);
 	}
 	if (aGameMode == GAMEMODE_CHALLENGE_SEEING_STARS)
 	{
-		mBoard->DisplayAdvice("[ADVICE_FILL_IN_STARFRUIT]", MESSAGE_STYLE_HINT_FAST, ADVICE_NONE);
+		mBoard->DisplayAdvice(_S("[ADVICE_FILL_IN_STARFRUIT]"), MESSAGE_STYLE_HINT_FAST, ADVICE_NONE);
 	}
 	if (mApp->IsSlotMachineLevel())
 	{
@@ -529,11 +653,11 @@ void Challenge::StartLevel()
 
 		if (aGameMode == GAMEMODE_CHALLENGE_BEGHOULED)
 		{
-			mBoard->DisplayAdvice("[ADVICE_BEGHOULED_DRAG_TO_MATCH_3]", MESSAGE_STYLE_HINT_FAST, ADVICE_NONE);
+			mBoard->DisplayAdvice(_S("[ADVICE_BEGHOULED_DRAG_TO_MATCH_3]"), MESSAGE_STYLE_HINT_FAST, ADVICE_NONE);
 		}
 		else if (aGameMode == GAMEMODE_CHALLENGE_BEGHOULED_TWIST)
 		{
-			mBoard->DisplayAdvice("[ADVICE_BEGHOULED_TWIST_TO_MATCH_3]", MESSAGE_STYLE_HINT_FAST, ADVICE_NONE);
+			mBoard->DisplayAdvice(_S("[ADVICE_BEGHOULED_TWIST_TO_MATCH_3]"), MESSAGE_STYLE_HINT_FAST, ADVICE_NONE);
 		}
 	}
 	if (mApp->IsMiniBossLevel())
@@ -559,9 +683,13 @@ void Challenge::StartLevel()
 	{
 		mBoard->mZombieCountDown = 5500;
 	}
+	if (aGameMode == GAMEMODE_CHALLENGE_WE_SMASH)
+	{
+		mBoard->mZombieCountDown = 6000;
+	}
 	if (aGameMode == GAMEMODE_CHALLENGE_ZOMBIQUARIUM)
 	{
-		mBoard->DisplayAdvice("[ADVICE_ZOMBIQUARIUM_CLICK_TO_FEED]", MESSAGE_STYLE_HINT_TALL_FAST, ADVICE_ZOMBIQUARIUM_CLICK_TO_FEED);
+		mBoard->DisplayAdvice(_S("[ADVICE_ZOMBIQUARIUM_CLICK_TO_FEED]"), MESSAGE_STYLE_HINT_TALL_FAST, ADVICE_ZOMBIQUARIUM_CLICK_TO_FEED);
 		ZombiquariumSpawnSnorkle();
 		ZombiquariumSpawnSnorkle();
 	}
@@ -575,19 +703,19 @@ void Challenge::StartLevel()
 	}
 }
 
-int Challenge::BeghouledTwistValidMove(int theGridX, int theGridY, BeghouledBoardState* theBoardState)
+bool Challenge::BeghouledTwistValidMove(int theGridX, int theGridY, BeghouledBoardState* theBoardState)
 {
 	if (theGridY == -1 || theGridX > 6 || theGridY > 3)
 		return false;
 
-	return
-		theBoardState->mSeedType[theGridX][theGridY] != SEED_NONE &&
+	return 
+		theBoardState->mSeedType[theGridX][theGridY] != SEED_NONE && 
 		theBoardState->mSeedType[theGridX + 1][theGridY] != SEED_NONE &&
-		theBoardState->mSeedType[theGridX][theGridY + 1] != SEED_NONE &&
+		theBoardState->mSeedType[theGridX][theGridY + 1] != SEED_NONE && 
 		theBoardState->mSeedType[theGridX + 1][theGridY + 1] != SEED_NONE;
 }
 
-int Challenge::BeghouledTwistMoveCausesMatch(int theGridX, int theGridY, BeghouledBoardState* theBoardState)
+bool Challenge::BeghouledTwistMoveCausesMatch(int theGridX, int theGridY, BeghouledBoardState* theBoardState)
 {
 	if (!BeghouledTwistValidMove(theGridX, theGridY, theBoardState))
 		return false;
@@ -597,12 +725,12 @@ int Challenge::BeghouledTwistMoveCausesMatch(int theGridX, int theGridY, Beghoul
 	SeedType aSeed3 = theBoardState->mSeedType[theGridX][theGridY + 1];
 	SeedType aSeed4 = theBoardState->mSeedType[theGridX + 1][theGridY + 1];
 
-	theBoardState->mSeedType[theGridX + 1][theGridY] = aSeed1;
-	theBoardState->mSeedType[theGridX + 1][theGridY + 1] = aSeed2;
-	theBoardState->mSeedType[theGridX][theGridY + 1] = aSeed4;
 	theBoardState->mSeedType[theGridX][theGridY] = aSeed3;
+	theBoardState->mSeedType[theGridX + 1][theGridY] = aSeed1;
+	theBoardState->mSeedType[theGridX][theGridY + 1] = aSeed4;
+	theBoardState->mSeedType[theGridX + 1][theGridY + 1] = aSeed2;
 
-	int aHasMatch = BeghouledBoardHasMatch(theBoardState);
+	bool aHasMatch = BeghouledBoardHasMatch(theBoardState);
 
 	theBoardState->mSeedType[theGridX][theGridY] = aSeed1;
 	theBoardState->mSeedType[theGridX + 1][theGridY] = aSeed2;
@@ -612,7 +740,7 @@ int Challenge::BeghouledTwistMoveCausesMatch(int theGridX, int theGridY, Beghoul
 	return aHasMatch;
 }
 
-int Challenge::BeghouledTwistSquareFromMouse(int theX, int theY, int& theGridX, int& theGridY)
+bool Challenge::BeghouledTwistSquareFromMouse(int theX, int theY, int& theGridX, int& theGridY)
 {
 	theGridX = mBoard->PixelToGridX(theX - 40, theY - 40);
 	theGridY = mBoard->PixelToGridY(theX - 40, theY - 40);
@@ -670,7 +798,7 @@ void Challenge::BeghouledStartFalling(ChallengeState theState)
 	mBoard->ClearAdvice(AdviceType::ADVICE_BEGHOULED_NO_MOVES);
 }
 
-int Challenge::BeghouledIsValidMove(int theFromX, int theFromY, int theToX, int theToY, BeghouledBoardState* theBoardState)
+bool Challenge::BeghouledIsValidMove(int theFromX, int theFromY, int theToX, int theToY, BeghouledBoardState* theBoardState)
 {
 	if (theFromX < 0 || theFromX > BEGHOULED_MAX_GRIDSIZEX || theToX < 0 || theToX > BEGHOULED_MAX_GRIDSIZEX ||
 		theFromY < 0 || theFromY > BEGHOULED_MAX_GRIDSIZEY || theToY < 0 || theToY > BEGHOULED_MAX_GRIDSIZEY ||
@@ -685,7 +813,7 @@ int Challenge::BeghouledIsValidMove(int theFromX, int theFromY, int theToX, int 
 	theBoardState->mSeedType[theFromX][theFromY] = aSeedTo;
 	theBoardState->mSeedType[theToX][theToY] = aSeedFrom;
 
-	int aValid = BeghouledBoardHasMatch(theBoardState);
+	bool aValid = BeghouledBoardHasMatch(theBoardState);
 
 	theBoardState->mSeedType[theFromX][theFromY] = aSeedFrom;
 	theBoardState->mSeedType[theToX][theToY] = aSeedTo;
@@ -771,7 +899,7 @@ void Challenge::BeghouledRemoveHorizontalMatch(int theGridX, int theGridY, Begho
 		if (aPlant)
 		{
 			aPlant->Die();
-
+		
 		}
 		theGridX++;
 	} while (BeghouledGetPlantAt(theGridX, theGridY, theBoardState) == aSeedType);
@@ -831,7 +959,7 @@ void Challenge::BeghouledUpdateCraters()
 		return;
 
 	SeedPacket* aSeedPacket = &mBoard->mSeedBank->mSeedPackets[4];
-	PVZP_ASSERT(aSeedPacket->mPacketType == SeedType::SEED_BEGHOULED_BUTTON_CRATER);
+	TOD_ASSERT(aSeedPacket->mPacketType == SeedType::SEED_BEGHOULED_BUTTON_CRATER);
 	aSeedPacket->SetActivate(BeghouledCanClearCrater());
 }
 
@@ -857,7 +985,7 @@ void Challenge::BeghouledClearCrater(int theCount)
 	}
 }
 
-void Challenge::BeghouledScore(int theGridX, int theGridY, int theNumPlants, int theIsHorizontal)
+void Challenge::BeghouledScore(int theGridX, int theGridY, int theNumPlants, bool theIsHorizontal)
 {
 	mApp->PlayFoley(FOLEY_ART_CHALLENGE);
 
@@ -881,7 +1009,7 @@ void Challenge::BeghouledScore(int theGridX, int theGridY, int theNumPlants, int
 		mBoard->mSeedBank->mSeedPackets[3].SetPacketType(SEED_BEGHOULED_BUTTON_SHUFFLE, SEED_NONE);
 		mBoard->mSeedBank->mNumPackets = 4;
 
-		mBoard->DisplayAdvice("[ADVICE_BEGHOULED_SAVE_SUN]", MESSAGE_STYLE_HINT_FAST, ADVICE_BEGHOULED_SAVE_SUN);
+		mBoard->DisplayAdvice(_S("[ADVICE_BEGHOULED_SAVE_SUN]"), MESSAGE_STYLE_HINT_FAST, ADVICE_BEGHOULED_SAVE_SUN);
 
 		if (BeghouledCanClearCrater())
 		{
@@ -893,12 +1021,12 @@ void Challenge::BeghouledScore(int theGridX, int theGridY, int theNumPlants, int
 	{
 		if (!mBoard->mAdvice->IsBeingDisplayed())
 		{
-			std::string aMsg = PvzpReplaceNumberString("[ADVICE_BEGHOULED_MATCH_3]", "{SCORE}", BEGHOULED_WINNING_SCORE);
+			SexyString aMsg = TodReplaceNumberString(_S("[ADVICE_BEGHOULED_MATCH_3]"), _S("{SCORE}"), BEGHOULED_WINNING_SCORE);
 			mBoard->DisplayAdvice(aMsg, MESSAGE_STYLE_HINT_FAST, ADVICE_BEGHOULED_MATCH_3);
 		}
 		if (mChallengeScore >= BEGHOULED_WINNING_SCORE - 5)
 		{
-			mBoard->DisplayAdvice("[ADVICE_BEGHOULED_ALMOST_THERE]", MESSAGE_STYLE_HINT_FAST, ADVICE_ALMOST_THERE);
+			mBoard->DisplayAdvice(_S("[ADVICE_BEGHOULED_ALMOST_THERE]"), MESSAGE_STYLE_HINT_FAST, ADVICE_ALMOST_THERE);
 		}
 	}
 
@@ -915,7 +1043,7 @@ void Challenge::BeghouledScore(int theGridX, int theGridY, int theNumPlants, int
 		{
 			aNumSuns += 2;
 		}
-		aNumSuns = std::clamp(aNumSuns, 1, 5);
+		aNumSuns = ClampInt(aNumSuns, 1, 5);
 
 		for (int i = 0; i < aNumSuns; i++)
 		{
@@ -973,27 +1101,27 @@ int Challenge::BeghouledVerticalMatchLength(int theGridX, int theGridY, Beghoule
 	return aLength;
 }
 
-int Challenge::BeghouledBoardHasMatch(BeghouledBoardState* theBoardState)
+bool Challenge::BeghouledBoardHasMatch(BeghouledBoardState* theBoardState)
 {
 	for (int aCol = 0; aCol < 8; aCol++)
 	{
 		for (int aRow = 0; aRow < 5; aRow++)
 		{
-			if (BeghouledHorizontalMatchLength(aCol, aRow, theBoardState) >= 3 ||
-				BeghouledVerticalMatchLength(aCol, aRow, theBoardState) >= 3)
+			if (BeghouledHorizontalMatchLength(aCol, aRow, theBoardState) >= 3 || 
+				BeghouledVerticalMatchLength(aCol, aRow, theBoardState) >= 3) 
 				return true;
 		}
 	}
 	return false;
 }
 
-SeedType Challenge::BeghouledPickSeed(int theGridX, int theGridY, BeghouledBoardState* theBoardState, int theAllowMatches)
+SeedType Challenge::BeghouledPickSeed(int theGridX, int theGridY, BeghouledBoardState* theBoardState, bool theAllowMatches)
 {
-	PVZP_ASSERT(theBoardState->mSeedType[theGridX][theGridY] == SEED_NONE);
-	// SeedType* aSeedState = &theBoardState->mSeedType[theGridX][theGridY];
+	TOD_ASSERT(theBoardState->mSeedType[theGridX][theGridY] == SEED_NONE);
+	SeedType* aSeedState = &theBoardState->mSeedType[theGridX][theGridY];
 	int aCount = 0;
-	SeedType aPickArray[6];
-
+	int aPickArray[6];
+	
 	for (int i = 0; i < 6; i++)
 	{
 		SeedType aSeedType;
@@ -1005,18 +1133,18 @@ SeedType Challenge::BeghouledPickSeed(int theGridX, int theGridY, BeghouledBoard
 		case 3:		aSeedType = SeedType::SEED_SNOWPEA;			break;
 		case 4:		aSeedType = SeedType::SEED_WALLNUT;			break;
 		case 5:		aSeedType = SeedType::SEED_PEASHOOTER;		break;
-		default:	PVZP_ASSERT(false);								break;
+		default:	TOD_ASSERT();								break;
 		}
 
-		if (mBeghouledPurcasedUpgrade[BeghouledUpgrade::BEGHOULED_UPGRADE_REPEATER] && aSeedType == SeedType::SEED_PEASHOOTER)
+		if (mBeghouledPurcasedUpgrade[(int)BeghouledUpgrade::BEGHOULED_UPGRADE_REPEATER] && aSeedType == SeedType::SEED_PEASHOOTER)
 		{
 			aSeedType = SeedType::SEED_REPEATER;
 		}
-		if (mBeghouledPurcasedUpgrade[BeghouledUpgrade::BEGHOULED_UPGRADE_FUMESHROOM] && aSeedType == SeedType::SEED_PUFFSHROOM)
+		if (mBeghouledPurcasedUpgrade[(int)BeghouledUpgrade::BEGHOULED_UPGRADE_FUMESHROOM] && aSeedType == SeedType::SEED_PUFFSHROOM)
 		{
 			aSeedType = SeedType::SEED_FUMESHROOM;
 		}
-		if (mBeghouledPurcasedUpgrade[BeghouledUpgrade::BEGHOULED_UPGRADE_TALLNUT] && aSeedType == SeedType::SEED_WALLNUT)
+		if (mBeghouledPurcasedUpgrade[(int)BeghouledUpgrade::BEGHOULED_UPGRADE_TALLNUT] && aSeedType == SeedType::SEED_WALLNUT)
 		{
 			aSeedType = SeedType::SEED_TALLNUT;
 		}
@@ -1029,12 +1157,12 @@ SeedType Challenge::BeghouledPickSeed(int theGridX, int theGridY, BeghouledBoard
 			aCount++;
 		}
 	}
-
+	
 	theBoardState->mSeedType[theGridX][theGridY] = SEED_NONE;
-	return PvzpPickFromArray(aPickArray, aCount);
+	return (SeedType)TodPickFromArray(aPickArray, aCount);
 }
 
-void Challenge::BeghouledFillHoles(BeghouledBoardState* theBoardState, int theAllowMatches)
+void Challenge::BeghouledFillHoles(BeghouledBoardState* theBoardState, bool theAllowMatches)
 {
 	for (int aCol = 0; aCol < BEGHOULED_MAX_GRIDSIZEX; aCol++)
 	{
@@ -1074,7 +1202,7 @@ void Challenge::BeghouledMakeStartBoard()
 	LoadBeghouledBoardState(&aBoardState);
 
 	BeghouledFillHoles(&aBoardState, false);
-	PVZP_ASSERT(!BeghouledBoardHasMatch(&aBoardState));
+	TOD_ASSERT(!BeghouledBoardHasMatch(&aBoardState));
 
 	if (!BeghouledBoardHasMatch(&aBoardState))
 	{
@@ -1086,13 +1214,12 @@ void Challenge::BeghouledPopulateBoard()
 {
 	BeghouledBoardState aEmptyBoardState, aBoardState;
 	LoadBeghouledBoardState(&aEmptyBoardState);
-	int aAllowGeneratedCascades = BeghouledBoardHasMatch(&aEmptyBoardState);
+	bool aAllowGeneratedCascades = BeghouledBoardHasMatch(&aEmptyBoardState);
 
 	for (int i = 0; i < 2; i++)
 	{
 		LoadBeghouledBoardState(&aBoardState);
 		BeghouledFillHoles(&aBoardState, aAllowGeneratedCascades);
-		// Refill once if the fill leaves no possible moves
 		if (BeghouledCheckForPossibleMoves(&aBoardState))
 			break;
 	}
@@ -1100,7 +1227,7 @@ void Challenge::BeghouledPopulateBoard()
 	BeghouledCreatePlants(&aEmptyBoardState, &aBoardState);
 }
 
-int Challenge::BeghouledCheckForPossibleMoves(BeghouledBoardState* theBoardState)
+bool Challenge::BeghouledCheckForPossibleMoves(BeghouledBoardState* theBoardState)
 {
 	GameMode aGameMode = mApp->mGameMode;
 
@@ -1122,13 +1249,8 @@ int Challenge::BeghouledCheckForPossibleMoves(BeghouledBoardState* theBoardState
 					return true;
 				}
 			}
-			else
-			{
-				return false;
-			}
 		}
 	}
-
 	return false;
 }
 
@@ -1142,7 +1264,7 @@ void Challenge::BeghouledDragStart(int x, int y)
 	}
 }
 
-int Challenge::MouseMove(int x, int y)
+bool Challenge::MouseMove(int x, int y)
 {
 	if (mApp->mGameMode == GAMEMODE_CHALLENGE_BEGHOULED && !mBoard->HasLevelAwardDropped())
 	{
@@ -1167,25 +1289,25 @@ int Challenge::MouseMove(int x, int y)
 	return false;
 }
 
-int Challenge::UpdateToolTip(int theX, int theY)
+bool Challenge::UpdateToolTip(int theX, int theY)
 {
 	if (!mApp->IsSlotMachineLevel())
 		return false;
-
+	
 	HitResult aHitResult;
 	mBoard->MouseHitTest(theX, theY, &aHitResult);
 	if (aHitResult.mObjectType != GameObjectType::OBJECT_TYPE_SLOT_MACHINE_HANDLE ||
 		mBoard->mCursorObject->mCursorType != CursorType::CURSOR_TYPE_NORMAL ||
 		mChallengeState != ChallengeState::STATECHALLENGE_NORMAL)
 		return false;
-
+	
 	if (!mBoard->CanTakeSunMoney(25))
 	{
-		mBoard->mToolTip->SetWarningText("[NOT_ENOUGH_SUN]");
+		mBoard->mToolTip->SetWarningText(_S("[NOT_ENOUGH_SUN]"));
 	}
 
 	Rect aSlotMachineHandleRect = SlotMachineGetHandleRect();
-	mBoard->mToolTip->SetLabel("[SLOT_MACHINE_PULL_TOOLTIP]");
+	mBoard->mToolTip->SetLabel(_S("[SLOT_MACHINE_PULL_TOOLTIP]"));
 	mBoard->mToolTip->SetPosition(aSlotMachineHandleRect.mX + 15, aSlotMachineHandleRect.mY + 65);
 	mBoard->mToolTip->mVisible = true;
 	mBoard->mToolTip->mCenter = true;
@@ -1197,11 +1319,10 @@ void Challenge::MouseDownWhackAZombie(int theX, int theY)
 	mApp->ReanimationTryToGet(mBoard->mCursorObject->mReanimCursorID)->mAnimTime = 0.2f;
 	mApp->PlayFoley(FOLEY_SWING);
 
+	Zombie* aZombie = nullptr;
 	Zombie* aTopZombie = nullptr;
-	for (Zombie* aZombie : mBoard->mZombies)
+	while (mBoard->IterateZombies(aZombie))
 	{
-		if (aZombie->mDead)
-			continue;
 		if (!aZombie->IsDeadOrDying())
 		{
 			Rect aZombieRect = aZombie->GetZombieRect();
@@ -1233,7 +1354,7 @@ void Challenge::MouseDownWhackAZombie(int theX, int theY)
 		else
 		{
 			mApp->PlayFoley(FOLEY_BONK);
-			mApp->AddPvzpParticle(theX - 3, theY + 9, RENDER_LAYER_ABOVE_UI, PARTICLE_POW);
+			mApp->AddTodParticle(theX - 3, theY + 9, RENDER_LAYER_ABOVE_UI, PARTICLE_POW);
 			aTopZombie->DieWithLoot();
 			mBoard->ClearCursor();
 		}
@@ -1251,7 +1372,6 @@ void Challenge::AdvanceCrazyDaveDialog()
 		return;
 	}
 
-	// "Here, I'll give you more vases." || "This should be their last wave."
 	if (mApp->mCrazyDaveMessageIndex == 2702 || mApp->mCrazyDaveMessageIndex == 2801)
 	{
 		ScaryPotterPopulate();
@@ -1260,7 +1380,7 @@ void Challenge::AdvanceCrazyDaveDialog()
 	}
 }
 
-int Challenge::MouseDown(int x, int y, int theClickCount, HitResult* theHitResult)
+bool Challenge::MouseDown(int x, int y, int theClickCount, HitResult* theHitResult)
 {
 	if (mApp->mGameMode == GAMEMODE_CHALLENGE_ZEN_GARDEN)
 	{
@@ -1328,14 +1448,10 @@ int Challenge::MouseDown(int x, int y, int theClickCount, HitResult* theHitResul
 		return true;
 	}
 
-	if (mApp->mGameMode == GAMEMODE_CHALLENGE_ZOMBIQUARIUM){
-		if (theClickCount > 0) {
-			ZombiquariumMouseDown(x,y);
-			return false;
-		} else {
-			mApp->PlaySample(Sexy::SOUND_TAPGLASS);
-			return true;
-		}
+	if (mApp->mGameMode == GAMEMODE_CHALLENGE_ZOMBIQUARIUM && theHitResult->mObjectType == OBJECT_TYPE_NONE)
+	{
+		ZombiquariumMouseDown(x, y);
+		return true;
 	}
 
 	if (mApp->IsScaryPotterLevel() && theHitResult->mObjectType == OBJECT_TYPE_SCARY_POT)
@@ -1352,14 +1468,13 @@ Rect Challenge::SlotMachineGetHandleRect()
 	return Rect(mBoard->mSeedBank->mX + 473, mBoard->mSeedBank->mY, 55, 80);
 }
 
-int Challenge::MouseUp(int x, int y)
+bool Challenge::MouseUp(int x, int y)
 {
-	(void)x;(void)y;
 	if (mApp->mGameMode == GAMEMODE_CHALLENGE_BEGHOULED)
 	{
 		if (mBeghouledMouseCapture && !mBoard->mAdvice->IsBeingDisplayed() && mChallengeScore == 0)
 		{
-			mBoard->DisplayAdvice("[ADVICE_BEGHOULED_DRAG_TO_MATCH_3]", MESSAGE_STYLE_HINT_FAST, ADVICE_BEGHOULED_DRAG_TO_MATCH_3);
+			mBoard->DisplayAdvice(_S("[ADVICE_BEGHOULED_DRAG_TO_MATCH_3]"), MESSAGE_STYLE_HINT_FAST, ADVICE_BEGHOULED_DRAG_TO_MATCH_3);
 		}
 
 		BeghouledDragCancel();
@@ -1381,35 +1496,35 @@ void Challenge::ClearCursor()
 	}
 }
 
-int Challenge::UpdateBeghouledPlant(Plant* thePlant)
+bool Challenge::UpdateBeghouledPlant(Plant* thePlant)
 {
-	int aMoving = false;
+	bool aMoving = false;
 	int aDiffX = mBoard->GridToPixelX(thePlant->mPlantCol, thePlant->mRow) - thePlant->mX;
 	int aDiffY = mBoard->GridToPixelY(thePlant->mPlantCol, thePlant->mRow) - thePlant->mY;
-	int aDelta = mChallengeState == STATECHALLENGE_BEGHOULED_MOVING ? 3 : PvzpAnimateCurve(90, 30, mChallengeStateCounter, 1, 20, CURVE_EASE_IN);
+	int aDelta = mChallengeState == STATECHALLENGE_BEGHOULED_MOVING ? 3 : TodAnimateCurve(90, 30, mChallengeStateCounter, 1, 20, CURVE_EASE_IN);
 	int aDeltaX = 0, aDeltaY = 0;
 
 	if (aDiffX > 0)
 	{
-		aDeltaX = std::min(aDelta, aDiffX);
+		aDeltaX = min(aDelta, aDiffX);
 		thePlant->mX += aDeltaX;
 		aMoving = true;
 	}
 	else if (aDiffX < 0)
 	{
-		aDeltaX = -std::min(aDelta, -aDiffX);
+		aDeltaX = -min(aDelta, -aDiffX);
 		thePlant->mX += aDeltaX;
 		aMoving = true;
 	}
 	if (aDiffY > 0)
 	{
-		aDeltaY = std::min(aDelta, aDiffY);
+		aDeltaY = min(aDelta, aDiffY);
 		thePlant->mY += aDeltaY;
 		aMoving = true;
 	}
 	else if (aDiffY < 0)
 	{
-		aDeltaY = -std::min(aDelta, -aDiffY);
+		aDeltaY = -min(aDelta, -aDiffY);
 		thePlant->mY += aDeltaY;
 		aMoving = true;
 	}
@@ -1437,11 +1552,11 @@ void Challenge::BeghouledFlashPlant(int theFlashX, int theFlashY, int theFromX, 
 	}
 
 	Plant* aFlashPlant = mBoard->GetTopPlantAt(theFlashX, theFlashY, PlantPriority::TOPPLANT_ONLY_NORMAL_POSITION);
-	if (aFlashPlant && aFlashPlant->mBeghouledFlashCountdown == 0)
-		aFlashPlant->mBeghouledFlashCountdown = 300;
+	if (aFlashPlant && aFlashPlant->mEatenFlashCountdown <= 300) 
+		aFlashPlant->mEatenFlashCountdown = 300;
 }
 
-int Challenge::BeghouledTwistFlashMatch(BeghouledBoardState* theBoardState, int theGridX, int theGridY)
+bool Challenge::BeghouledTwistFlashMatch(BeghouledBoardState* theBoardState, int theGridX, int theGridY)
 {
 	if (!BeghouledTwistMoveCausesMatch(theGridX, theGridY, theBoardState))
 		return false;
@@ -1449,18 +1564,18 @@ int Challenge::BeghouledTwistFlashMatch(BeghouledBoardState* theBoardState, int 
 	for (int i = 0; i < 4; i++)
 	{
 		Plant* aPlant = mBoard->GetTopPlantAt(theGridX + (i % 2), theGridY + (i / 2), PlantPriority::TOPPLANT_ANY);
-		if (aPlant && aPlant->mBeghouledFlashCountdown == 0)
+		if (aPlant && aPlant->mEatenFlashCountdown <= 300)
 		{
-			aPlant->mBeghouledFlashCountdown = 300;
+			aPlant->mEatenFlashCountdown = 300;
 		}
 	}
 	return true;
 }
 
-int Challenge::BeghouledFlashFromBoardState(BeghouledBoardState* theBoardState, int theFromX, int theFromY, int theToX, int theToY)
+bool Challenge::BeghouledFlashFromBoardState(BeghouledBoardState* theBoardState, int theFromX, int theFromY, int theToX, int theToY)
 {
-	PVZP_ASSERT(theFromX >= 0 && theFromX < BEGHOULED_MAX_GRIDSIZEX && theFromY >= 0 && theFromY < BEGHOULED_MAX_GRIDSIZEY);
-	PVZP_ASSERT(theToX >= 0 && theToX < BEGHOULED_MAX_GRIDSIZEX && theToY >= 0 && theToY < BEGHOULED_MAX_GRIDSIZEY);
+	TOD_ASSERT(theFromX >= 0 && theFromX < BEGHOULED_MAX_GRIDSIZEX && theFromY >= 0 && theFromY < BEGHOULED_MAX_GRIDSIZEY);
+	TOD_ASSERT(theToX >= 0 && theToX < BEGHOULED_MAX_GRIDSIZEX && theToY >= 0 && theToY < BEGHOULED_MAX_GRIDSIZEY);
 
 	if (mBeghouledEated[theFromX][theFromY] || mBeghouledEated[theToX][theToY])
 		return false;
@@ -1470,7 +1585,7 @@ int Challenge::BeghouledFlashFromBoardState(BeghouledBoardState* theBoardState, 
 	theBoardState->mSeedType[theFromX][theFromY] = aToSeedType;
 	theBoardState->mSeedType[theToX][theToY] = aFromSeedType;
 
-	int aHasMatch = false;
+	bool aHasMatch = false;
 	for (int aRow = 0; aRow < BEGHOULED_MAX_GRIDSIZEY; aRow++)
 	{
 		for (int aCol = 0; aCol < BEGHOULED_MAX_GRIDSIZEX; aCol++)
@@ -1504,10 +1619,9 @@ int Challenge::BeghouledFlashFromBoardState(BeghouledBoardState* theBoardState, 
 
 void Challenge::BeghouledCancelMatchFlashing()
 {
-	for (Plant* aPlant : mBoard->mPlants)
+	Plant* aPlant = nullptr;
+	while (mBoard->IteratePlants(aPlant))
 	{
-		if (aPlant->mDead)
-			continue;
 		if (aPlant->mEatenFlashCountdown >= 25)
 			aPlant->mEatenFlashCountdown = 25;
 	}
@@ -1517,7 +1631,7 @@ void Challenge::BeghouledFlashAMatch()
 {
 	BeghouledBoardState aBoardState;
 	LoadBeghouledBoardState(&aBoardState);
-
+	
 	GameMode aGameMode = mApp->mGameMode;
 	if (aGameMode == GameMode::GAMEMODE_CHALLENGE_BEGHOULED)
 	{
@@ -1546,13 +1660,12 @@ void Challenge::BeghouledFlashAMatch()
 
 void Challenge::UpdateBeghouled()
 {
-	mBoard->mProgressMeterWidth = PvzpAnimateCurve(0, BEGHOULED_WINNING_SCORE, mChallengeScore, 0, PROGRESS_METER_COUNTER, CURVE_LINEAR);
+	mBoard->mProgressMeterWidth = TodAnimateCurve(0, BEGHOULED_WINNING_SCORE, mChallengeScore, 0, PROGRESS_METER_COUNTER, CURVE_LINEAR);
 
-	int aMovingPlant = false;
-	for (Plant* aPlant : mBoard->mPlants)
+	bool aMovingPlant = false;
+	Plant* aPlant = nullptr;
+	while (mBoard->IteratePlants(aPlant))
 	{
-		if (aPlant->mDead)
-			continue;
 		if (UpdateBeghouledPlant(aPlant))
 		{
 			aMovingPlant = true;
@@ -1564,7 +1677,7 @@ void Challenge::UpdateBeghouled()
 		int aCost = mBoard->GetCurrentPlantCost(SEED_BEGHOULED_BUTTON_CRATER, SEED_NONE);
 		if (mBoard->CanTakeSunMoney(aCost) && BeghouledCanClearCrater() && !mBoard->HasLevelAwardDropped())
 		{
-			mBoard->DisplayAdvice("[ADVICE_BEGHOULED_USE_CRATER_2]", MESSAGE_STYLE_HINT_FAST, ADVICE_BEGHOULED_USE_CRATER_2);
+			mBoard->DisplayAdvice(_S("[ADVICE_BEGHOULED_USE_CRATER_2]"), MESSAGE_STYLE_HINT_FAST, ADVICE_BEGHOULED_USE_CRATER_2);
 		}
 	}
 
@@ -1619,7 +1732,7 @@ void Challenge::UpdateBeghouled()
 			}
 			else if (mChallengeState == STATECHALLENGE_BEGHOULED_NO_MATCHES)
 			{
-				mApp->AddPvzpParticle(BOARD_WIDTH / 2, BOARD_HEIGHT / 2, RENDER_LAYER_TOP, PARTICLE_SCREEN_FLASH);
+				mApp->AddTodParticle(BOARD_WIDTH / 2, BOARD_HEIGHT / 2, RENDER_LAYER_TOP, PARTICLE_SCREEN_FLASH);
 				BeghouledShuffle();
 			}
 		}
@@ -1656,7 +1769,7 @@ void Challenge::UpdateConveyorBelt()
 	int aNumSeedsOnConveyor = mBoard->mSeedBank->GetNumSeedsOnConveyorBelt();
 	mConveyorBeltCounter = aConveyorSpeedMultiplier * (aNumSeedsOnConveyor > 8 ? 1000 : aNumSeedsOnConveyor > 6 ? 500 : aNumSeedsOnConveyor > 4 ? 425 : 400);
 
-	PvzpWeightedArray aSeedPickArray[20];
+	TodWeightedArray aSeedPickArray[20];
 	int aSeedPickCount = 0;
 	if (mBoard->mLevel == 10)
 	{
@@ -1734,21 +1847,59 @@ void Challenge::UpdateConveyorBelt()
 		aSeedPickArray[7].mItem = SEED_PUMPKINSHELL;
 		aSeedPickArray[7].mWeight = 10;
 	}
-	else if (mApp->IsFinalBossLevel())
+	else if (mApp->IsAdventureMode() && mBoard->mLevel == 50)
+	{
+		aSeedPickCount = 7;
+		aSeedPickArray[0].mItem = SEED_FLOWERPOT;
+		aSeedPickArray[0].mWeight = 50;
+		aSeedPickArray[1].mItem = SEED_JALAPENO;
+		aSeedPickArray[1].mWeight = 15;
+		aSeedPickArray[2].mItem = SEED_KERNELPULT;
+		aSeedPickArray[2].mWeight = 20;
+		aSeedPickArray[3].mItem = SEED_CABBAGEPULT;
+		aSeedPickArray[3].mWeight = 20;
+		aSeedPickArray[4].mItem = SEED_UMBRELLA;
+		aSeedPickArray[4].mWeight = 15;
+		aSeedPickArray[5].mItem = SEED_PUMPKINSHELL;
+		aSeedPickArray[5].mWeight = 15;
+		aSeedPickArray[6].mItem = SEED_MELONPULT;
+		aSeedPickArray[6].mWeight = 10;
+	}
+	else if (mApp->IsAdventureMode() && mBoard->mLevel == 55)
 	{
 		aSeedPickCount = 6;
+		aSeedPickArray[0].mItem = SEED_PEPPERPULT;
+		aSeedPickArray[0].mWeight = 20;
+		aSeedPickArray[1].mItem = SEED_SPORESHROOM;
+		aSeedPickArray[1].mWeight = 20;
+		aSeedPickArray[2].mItem = SEED_PUMPKINSHELL;
+		aSeedPickArray[2].mWeight = 15;
+		aSeedPickArray[3].mItem = SEED_CUCKUMBER;
+		aSeedPickArray[3].mWeight = 10;
+		aSeedPickArray[4].mItem = SEED_FLOWERPOT;
+		aSeedPickArray[4].mWeight = 25;
+		aSeedPickArray[5].mItem = SEED_MELONPULT;
+		aSeedPickArray[5].mWeight = 10;
+	}
+	else if (mApp->IsFinalBossLevel())
+	{
+		aSeedPickCount = 8;
 		aSeedPickArray[0].mItem = SEED_FLOWERPOT;
 		aSeedPickArray[0].mWeight = 55;
 		aSeedPickArray[1].mItem = SEED_MELONPULT;
 		aSeedPickArray[1].mWeight = 10;
 		aSeedPickArray[2].mItem = SEED_JALAPENO;
 		aSeedPickArray[2].mWeight = 12;
-		aSeedPickArray[3].mItem = SEED_CABBAGEPULT;
-		aSeedPickArray[3].mWeight = 10;
+		aSeedPickArray[3].mItem = SEED_BLOVER;
+		aSeedPickArray[3].mWeight = 8;
 		aSeedPickArray[4].mItem = SEED_KERNELPULT;
 		aSeedPickArray[4].mWeight = 5;
 		aSeedPickArray[5].mItem = SEED_ICESHROOM;
 		aSeedPickArray[5].mWeight = 8;
+		aSeedPickArray[6].mItem = SEED_CUCKUMBER;
+		aSeedPickArray[6].mWeight = 8;
+		aSeedPickArray[7].mItem = SEED_PEPPERPULT;
+		aSeedPickArray[7].mWeight = 10;
 	}
 	else if (mApp->IsShovelLevel())
 	{
@@ -1791,8 +1942,8 @@ void Challenge::UpdateConveyorBelt()
 		aSeedPickCount = 5;
 		aSeedPickArray[0].mItem = SEED_LILYPAD;
 		aSeedPickArray[0].mWeight = 30;
-		aSeedPickArray[1].mItem = SEED_CACTUS;
-		aSeedPickArray[1].mWeight = 10;
+		aSeedPickArray[1].mItem = SEED_PLANTERN;
+		aSeedPickArray[1].mWeight = 40;
 		aSeedPickArray[2].mItem = SEED_PEASHOOTER;
 		aSeedPickArray[2].mWeight = 20;
 		aSeedPickArray[3].mItem = SEED_PUFFSHROOM;
@@ -1860,11 +2011,11 @@ void Challenge::UpdateConveyorBelt()
 		aSeedPickArray[5].mItem = SEED_ICESHROOM;
 		aSeedPickArray[5].mWeight = 10;
 	}
-	else PVZP_ASSERT(false);
+	else TOD_ASSERT();
 
 	for (int i = 0; i < aSeedPickCount; i++)
 	{
-		PvzpWeightedArray& aSeedPick = aSeedPickArray[i];
+		TodWeightedArray& aSeedPick = aSeedPickArray[i];
 		SeedType aSeedType = (SeedType)aSeedPick.mItem;
 		int aCountInBank = mBoard->mSeedBank->CountOfTypeOnConveyorBelt(aSeedType);
 		int aTotalCount = mBoard->CountPlantByType(aSeedType) + aCountInBank;
@@ -1879,11 +2030,11 @@ void Challenge::UpdateConveyorBelt()
 		}
 		else if (aSeedType == SEED_LILYPAD)
 		{
-			aSeedPick.mWeight = PvzpAnimateCurve(0, 18, aTotalCount, aSeedPick.mWeight, 1, CURVE_LINEAR);
+			aSeedPick.mWeight = TodAnimateCurve(0, 18, aTotalCount, aSeedPick.mWeight, 1, CURVE_LINEAR);
 		}
 		else if (aSeedType == SEED_FLOWERPOT)
 		{
-			aSeedPick.mWeight = PvzpAnimateCurve(0, mApp->mGameMode == GAMEMODE_CHALLENGE_COLUMN ? 45 : 35, aTotalCount, aSeedPick.mWeight, 1, CURVE_LINEAR);
+			aSeedPick.mWeight = TodAnimateCurve(0, mApp->mGameMode == GAMEMODE_CHALLENGE_COLUMN ? 45 : 35, aTotalCount, aSeedPick.mWeight, 1, CURVE_LINEAR);
 		}
 
 		if (mApp->IsFinalBossLevel())
@@ -1924,7 +2075,7 @@ void Challenge::UpdateConveyorBelt()
 		}
 	}
 
-	SeedType aSeedType = (SeedType)PvzpPickFromWeightedArray(aSeedPickArray, aSeedPickCount);
+	SeedType aSeedType = (SeedType)TodPickFromWeightedArray(aSeedPickArray, aSeedPickCount);
 	mBoard->mSeedBank->AddSeed(aSeedType);
 	mLastConveyorSeedType = aSeedType;
 }
@@ -1935,25 +2086,33 @@ void Challenge::UpdateRainingSeeds()
 		return;
 
 	mChallengeStateCounter = RandRangeInt(500, 999);
-
-	Coin* aCoin = mBoard->AddCoin(RandRangeInt(100, 649), 60, COIN_USABLE_SEED_PACKET, COIN_MOTION_FROM_SKY_SLOW);
+	Coin* aCoin = mBoard->AddCoin(RandRangeInt(100 + BOARD_ADDITIONAL_WIDTH, 649 + BOARD_ADDITIONAL_WIDTH), 60, COIN_USABLE_SEED_PACKET, COIN_MOTION_FROM_SKY_SLOW);
 
 	SeedType aSeedType;
-	do
+	bool isRaining2 = (mApp->mGameMode == GameMode::GAMEMODE_CHALLENGE_RAINING_SEEDS_2);
+
+	do {
 		aSeedType = (SeedType)Rand(mApp->GetSeedsAvailable());
-	while (
+	} while (
 		mBoard->SeedNotRecommendedForLevel(aSeedType) ||
-		!mApp->HasSeedType(aSeedType) ||
+		!mApp->SeedTypeAvailable(aSeedType) ||
 		Plant::IsUpgrade(aSeedType) ||
 		aSeedType == SEED_SUNFLOWER ||
 		aSeedType == SEED_TWINSUNFLOWER ||
 		aSeedType == SEED_INSTANT_COFFEE ||
 		aSeedType == SEED_UMBRELLA ||
 		aSeedType == SEED_SUNSHROOM ||
-		aSeedType == SEED_IMITATER
+		aSeedType == SEED_IMITATER ||
+		(isRaining2 && (aSeedType == SEED_LILYPAD || aSeedType == SEED_GRAVEBUSTER)) 
 		);
-	if (Rand(100) < PvzpAnimateCurve(0, 18, mBoard->CountPlantByType(SEED_LILYPAD), 30, 1, CURVE_LINEAR))
+	if (!isRaining2 && Rand(100) < TodAnimateCurve(0, 18, mBoard->CountPlantByType(SEED_LILYPAD), 30, 1, CURVE_LINEAR))
 		aSeedType = SEED_LILYPAD;
+	if (isRaining2)
+	{
+		int randBoost = Rand(100);
+		if (randBoost < 25) aSeedType = SEED_FLOWERPOT;
+		else if (randBoost < 45) aSeedType = SEED_PEPPERPULT;
+	}
 
 	aCoin->mUsableSeedType = aSeedType;
 }
@@ -1995,38 +2154,36 @@ void Challenge::UpdateStormyNight()
 	}
 	else
 	{
-		// If a yeti zombie is present, randomize the countdown to 350~450
 		if (mBoard->CountZombieByType(ZombieType::ZOMBIE_YETI))
 		{
 			mChallengeStateCounter = STORM_FLASH_TIME + RandRangeInt(200, 300);
 		}
 		else
 		{
-			int aMaxDur = Sexy::Rand(2) ? 400 : 750;
-			mChallengeStateCounter = STORM_FLASH_TIME + RandRangeInt(300, aMaxDur);
+			mChallengeStateCounter = STORM_FLASH_TIME + RandRangeInt(1350, 1850);
 		}
 
-		mChallengeState = static_cast<ChallengeState>(RandRangeInt(static_cast<int>(STATECHALLENGE_STORM_FLASH_1), static_cast<int>(STATECHALLENGE_STORM_FLASH_3)));
+		mChallengeState = (ChallengeState)RandRangeInt((int)STATECHALLENGE_STORM_FLASH_1, (int)STATECHALLENGE_STORM_FLASH_3);
 	}
 }
 
 void Challenge::UpdateSlotMachine()
 {
-	int aSunMoney = std::clamp(mBoard->mSunMoney, 0, 2000);
+	int aSunMoney = ClampInt(mBoard->mSunMoney, 0, 2000);
 	if (aSunMoney >= SLOT_MACHINE_WINNING_SCORE - 100)
 	{
-		mBoard->DisplayAdvice("[ADVICE_ALMOST_THERE]", MESSAGE_STYLE_HINT_FAST, ADVICE_ALMOST_THERE);
+		mBoard->DisplayAdvice(_S("[ADVICE_ALMOST_THERE]"), MESSAGE_STYLE_HINT_FAST, ADVICE_ALMOST_THERE);
 	}
 	if (aSunMoney >= 2000)
 	{
 		SpawnLevelAward(4, 2);
 		mBoard->ClearAdvice(ADVICE_NONE);
 	}
-	mBoard->mProgressMeterWidth = PvzpAnimateCurve(0, SLOT_MACHINE_WINNING_SCORE, aSunMoney, 0, PROGRESS_METER_COUNTER, CURVE_LINEAR);
+	mBoard->mProgressMeterWidth = TodAnimateCurve(0, SLOT_MACHINE_WINNING_SCORE, aSunMoney, 0, PROGRESS_METER_COUNTER, CURVE_LINEAR);
 
 	if (!mBoard->mAdvice->IsBeingDisplayed())
 	{
-		std::string aMsg = PvzpReplaceNumberString("[ADVICE_SLOT_MACHINE_COLLECT_SUN]", "{SCORE}", SLOT_MACHINE_WINNING_SCORE);
+		SexyString aMsg = TodReplaceNumberString(_S("[ADVICE_SLOT_MACHINE_COLLECT_SUN]"), _S("{SCORE}"), SLOT_MACHINE_WINNING_SCORE);
 		mBoard->DisplayAdvice(aMsg, MESSAGE_STYLE_SLOT_MACHINE, ADVICE_SLOT_MACHINE_COLLECT_SUN);
 	}
 
@@ -2034,7 +2191,7 @@ void Challenge::UpdateSlotMachine()
 	{
 		if (!mBoard->mAdvice->IsBeingDisplayed() && !mBoard->HasLevelAwardDropped())
 		{
-			mBoard->DisplayAdviceAgain("[ADVICE_SLOT_MACHINE_SPIN_AGAIN]", MESSAGE_STYLE_SLOT_MACHINE, ADVICE_SLOT_MACHINE_SPIN_AGAIN);
+			mBoard->DisplayAdviceAgain(_S("[ADVICE_SLOT_MACHINE_SPIN_AGAIN]"), MESSAGE_STYLE_SLOT_MACHINE, ADVICE_SLOT_MACHINE_SPIN_AGAIN);
 		}
 	}
 	else if (mBoard->mSeedBank->mSeedPackets[0].mSlotMachineCountDown <= 0)
@@ -2053,12 +2210,12 @@ void Challenge::UpdateSlotMachine()
 				SeedType aSeedType = (aPacket1 == aPacket2 || aPacket1 == aPacket3) ? aPacket1 : aPacket2;
 				if (aSeedType == SEED_SLOT_MACHINE_DIAMOND)
 				{
-					mBoard->DisplayAdvice("[ADVICE_SLOT_MACHINE_2_DIAMONDS]", MESSAGE_STYLE_SLOT_MACHINE, ADVICE_NONE);
+					mBoard->DisplayAdvice(_S("[ADVICE_SLOT_MACHINE_2_DIAMONDS]"), MESSAGE_STYLE_SLOT_MACHINE, ADVICE_NONE);
 					mBoard->AddCoin(360, 85, COIN_DIAMOND, COIN_MOTION_COIN);
 				}
 				else if (aSeedType == SEED_SLOT_MACHINE_SUN)
 				{
-					mBoard->DisplayAdvice("[ADVICE_SLOT_MACHINE_2_SUNS]", MESSAGE_STYLE_SLOT_MACHINE, ADVICE_NONE);
+					mBoard->DisplayAdvice(_S("[ADVICE_SLOT_MACHINE_2_SUNS]"), MESSAGE_STYLE_SLOT_MACHINE, ADVICE_NONE);
 					for (int i = 0; i < 4; i++)
 					{
 						mBoard->AddCoin(320 + i * 15, 85, COIN_SUN, COIN_MOTION_COIN);
@@ -2066,7 +2223,7 @@ void Challenge::UpdateSlotMachine()
 				}
 				else
 				{
-					mBoard->DisplayAdvice("[ADVICE_SLOT_MACHINE_2_OF_A_KIND]", MESSAGE_STYLE_SLOT_MACHINE, ADVICE_NONE);
+					mBoard->DisplayAdvice(_S("[ADVICE_SLOT_MACHINE_2_OF_A_KIND]"), MESSAGE_STYLE_SLOT_MACHINE, ADVICE_NONE);
 					mBoard->AddCoin(360, 85, COIN_USABLE_SEED_PACKET, COIN_MOTION_COIN)->mUsableSeedType = aSeedType;
 				}
 			}
@@ -2076,7 +2233,7 @@ void Challenge::UpdateSlotMachine()
 			mApp->PlayFoley(FOLEY_ART_CHALLENGE);
 			if (aPacket1 == SEED_SLOT_MACHINE_DIAMOND)
 			{
-				mBoard->DisplayAdvice("[ADVICE_SLOT_MACHINE_DIAMOND_JACKPOT]", MESSAGE_STYLE_SLOT_MACHINE, ADVICE_NONE);
+				mBoard->DisplayAdvice(_S("[ADVICE_SLOT_MACHINE_DIAMOND_JACKPOT]"), MESSAGE_STYLE_SLOT_MACHINE, ADVICE_NONE);
 				for (int i = 0; i < 5; i++)
 				{
 					mBoard->AddCoin(320 + i * 12, 85, COIN_DIAMOND, COIN_MOTION_COIN);
@@ -2084,7 +2241,7 @@ void Challenge::UpdateSlotMachine()
 			}
 			else if (aPacket1 == SEED_SLOT_MACHINE_SUN)
 			{
-				mBoard->DisplayAdvice("[ADVICE_SLOT_MACHINE_SUN_JACKPOT]", MESSAGE_STYLE_SLOT_MACHINE, ADVICE_NONE);
+				mBoard->DisplayAdvice(_S("[ADVICE_SLOT_MACHINE_SUN_JACKPOT]"), MESSAGE_STYLE_SLOT_MACHINE, ADVICE_NONE);
 				for (int i = 0; i < 20; i++)
 				{
 					mBoard->AddCoin(320 + i * 3, 85, COIN_SUN, COIN_MOTION_COIN);
@@ -2092,7 +2249,7 @@ void Challenge::UpdateSlotMachine()
 			}
 			else
 			{
-				mBoard->DisplayAdvice("[ADVICE_SLOT_MACHINE_3_OF_A_KIND]", MESSAGE_STYLE_SLOT_MACHINE, ADVICE_NONE);
+				mBoard->DisplayAdvice(_S("[ADVICE_SLOT_MACHINE_3_OF_A_KIND]"), MESSAGE_STYLE_SLOT_MACHINE, ADVICE_NONE);
 				for (int i = 0; i < 3; i++)
 				{
 					mBoard->AddCoin(320 + i * 20, 85, COIN_USABLE_SEED_PACKET, COIN_MOTION_COIN)->mUsableSeedType = aPacket1;
@@ -2117,9 +2274,8 @@ void Challenge::BeghouledCheckStuckState()
 	}
 }
 
-void Challenge::ZombieAtePlant(/*Zombie* theZombie,*/ Plant* thePlant)
+void Challenge::ZombieAtePlant(Zombie* theZombie, Plant* thePlant)
 {
-	// theZombie was dropped from the signature; if re-enabled, note callers may pass nullptr
 	if (mApp->mGameMode != GAMEMODE_CHALLENGE_BEGHOULED && mApp->mGameMode != GAMEMODE_CHALLENGE_BEGHOULED_TWIST)
 		return;
 
@@ -2127,9 +2283,9 @@ void Challenge::ZombieAtePlant(/*Zombie* theZombie,*/ Plant* thePlant)
 
 	if (mBoard->mSeedBank->mNumPackets == 4)
 	{
-		mBoard->mSeedBank->mNumPackets += 1;
 		mBoard->mSeedBank->mSeedPackets[4].SetPacketType(SEED_BEGHOULED_BUTTON_CRATER);
-		mBoard->DisplayAdvice("[ADVICE_BEGHOULED_USE_CRATER_1]", MESSAGE_STYLE_HINT_FAST, ADVICE_BEGHOULED_USE_CRATER_1);
+		mBoard->mSeedBank->mNumPackets = 5;
+		mBoard->DisplayAdvice(_S("[ADVICE_BEGHOULED_USE_CRATER_1]"), MESSAGE_STYLE_HINT_FAST, ADVICE_BEGHOULED_USE_CRATER_1);
 	}
 
 	BeghouledCheckStuckState();
@@ -2138,8 +2294,10 @@ void Challenge::ZombieAtePlant(/*Zombie* theZombie,*/ Plant* thePlant)
 
 void Challenge::Update()
 {
-	if (mApp->IsStormyNightLevel())
+	if (mApp->IsStormyNightLevel() || (mBoard && mBoard->mLevel == 17))
+	{
 		UpdateStormyNight();
+	}
 
 	if (mBoard->mPaused)
 	{
@@ -2151,7 +2309,7 @@ void Challenge::Update()
 		return;
 	}
 
-	if (mApp->mGameMode == GAMEMODE_CHALLENGE_RAINING_SEEDS || mApp->IsStormyNightLevel())
+	if (mApp->mGameMode == GAMEMODE_CHALLENGE_RAINING_SEEDS || mApp->mGameMode == GAMEMODE_CHALLENGE_RAINING_SEEDS_2 || mApp->IsStormyNightLevel() || mApp->mGameMode == GAMEMODE_ADVENTURE || mApp->mGameMode == GAMEMODE_CHALLENGE_ADV2_5|| mApp->mGameMode == GAMEMODE_CHALLENGE_ADV2_4|| mApp->mGameMode == GAMEMODE_CHALLENGE_ADV2_3|| mApp->mGameMode == GAMEMODE_CHALLENGE_ADV2_2 || mApp->mGameMode == GAMEMODE_CHALLENGE_ADV2_1)
 	{
 		UpdateRain();
 	}
@@ -2171,7 +2329,7 @@ void Challenge::Update()
 	{
 		ScaryPotterUpdate();
 	}
-	if ((mApp->IsScaryPotterLevel() || mApp->IsWhackAZombieLevel()) && mBoard->mSeedBank->mY < 0)
+	if (mApp->CanShowSeedBankAfterSun() && mBoard->mSeedBank->mY < 0)
 	{
 		if (mBoard->mSunMoney + mBoard->CountSunBeingCollected() > 0 || mBoard->mSeedBank->mY > Sexy::IMAGE_SEEDBANK->mWidth)
 		{
@@ -2199,7 +2357,7 @@ void Challenge::Update()
 	{
 		mBoard->UpdateGame();
 	}
-	if (mApp->mGameMode == GAMEMODE_CHALLENGE_RAINING_SEEDS)
+	if (mApp->mGameMode == GAMEMODE_CHALLENGE_RAINING_SEEDS || mApp->mGameMode == GAMEMODE_CHALLENGE_RAINING_SEEDS_2)
 	{
 		UpdateRainingSeeds();
 	}
@@ -2228,7 +2386,7 @@ void Challenge::Update()
 	{
 		LastStandUpdate();
 	}
-
+	
 	Reanimation* aReanim = mApp->ReanimationTryToGet(mReanimChallenge);
 	if (aReanim && aReanim->mIsAttachment)
 	{
@@ -2240,7 +2398,7 @@ SeedType Challenge::GetArtChallengeSeed(int theGridX, int theGridY)
 {
 	if (theGridY < 6)
 	{
-		PVZP_ASSERT(theGridX >= 0 && theGridX < ART_CHALLEGE_SIZE_X && theGridY >= 0);
+		TOD_ASSERT(theGridX >= 0 && theGridX < ART_CHALLEGE_SIZE_X && theGridY >= 0);
 
 		GameMode aGameMode = mApp->mGameMode;
 		if (aGameMode == GAMEMODE_CHALLENGE_ART_CHALLENGE_WALLNUT)		return gArtChallengeWallnut[theGridY][theGridX];
@@ -2257,15 +2415,15 @@ void Challenge::SpawnLevelAward(int theGridX, int theGridY)
 
 	float aPosX = mBoard->GridToPixelX(theGridX, theGridY) + 40;
 	float aPosY = mBoard->GridToPixelY(theGridX, theGridY) + 40;
-	CoinType aCoinType =
-		mApp->IsFirstTimeAdventureMode() ? COIN_FINAL_SEED_PACKET :
+	CoinType aCoinType = 
+		mApp->IsFirstTimeAdventureMode() ? COIN_FINAL_SEED_PACKET : 
 		mApp->IsAdventureMode() || mApp->HasBeatenChallenge(mApp->mGameMode) ? COIN_AWARD_MONEY_BAG : COIN_TROPHY;
-
+	
 	mBoard->mLevelAwardSpawned = true;
 	mApp->mBoardResult = BOARDRESULT_WON;
 	mApp->PlayFoley(FOLEY_SPAWN_SUN);
 	Coin* aCoin = mBoard->AddCoin(aPosX, aPosY, aCoinType, COIN_MOTION_COIN);
-	mApp->AddPvzpParticle(BOARD_WIDTH / 2, BOARD_HEIGHT / 2, RENDER_LAYER_TOP, PARTICLE_SCREEN_FLASH);
+	mApp->AddTodParticle(BOARD_WIDTH / 2, BOARD_HEIGHT / 2, RENDER_LAYER_TOP, PARTICLE_SCREEN_FLASH);
 
 	if (mApp->mGameMode == GAMEMODE_CHALLENGE_ZOMBIQUARIUM)
 	{
@@ -2273,10 +2431,9 @@ void Challenge::SpawnLevelAward(int theGridX, int theGridY)
 	}
 	else if (!mApp->IsIZombieLevel())
 	{
-		for (Zombie* aZombie : mBoard->mZombies)
+		Zombie* aZombie = nullptr;
+		while (mBoard->IterateZombies(aZombie))
 		{
-			if (aZombie->mDead)
-				continue;
 			if (!aZombie->IsDeadOrDying())
 			{
 				aZombie->TakeDamage(1800, 0U);
@@ -2324,11 +2481,13 @@ void Challenge::DrawArtChallenge(Graphics* g)
 			}
 		}
 	}
-
-	if (mApp->mGameMode == GAMEMODE_CHALLENGE_ART_CHALLENGE_WALLNUT)
+	
+	// Only for beta 0.1.1
+	/*if (mApp->mGameMode == GAMEMODE_CHALLENGE_ART_CHALLENGE_WALLNUT)
 	{
-		// assets removed, perhaps add back?
-	}
+		g->DrawImage(Sexy::IMAGE_GOOGLYEYE, 357, 174);
+		g->DrawImage(Sexy::IMAGE_GOOGLYEYE, 516, 174);
+	}*/
 
 	g->SetColorizeImages(false);
 }
@@ -2345,7 +2504,7 @@ void Challenge::DrawBeghouled(Graphics* g)
 			}
 		}
 	}
-
+			
 	if (mApp->mGameMode == GAMEMODE_CHALLENGE_BEGHOULED_TWIST)
 	{
 		HitResult aHitResult;
@@ -2355,15 +2514,12 @@ void Challenge::DrawBeghouled(Graphics* g)
 			float aPixelX = mBoard->GridToPixelX(mChallengeGridX, mChallengeGridY) + 80;
 			float aPixelY = mBoard->GridToPixelY(mChallengeGridX, mChallengeGridY) + 100;
 
-			// Rotation speed coefficient is 2*PI*0.001, which means one full rotation every 1000 frames. Modulus is to avoid large angle float precision cliffs.
-			constexpr uint32_t BEGHOULED_TWIST_ROTATION_PERIOD = 1000;
-			float aRotation = -static_cast<float>(mBoard->mMainCounter % BEGHOULED_TWIST_ROTATION_PERIOD) * (2 * PI * 0.001f);
 			SexyTransform2D aTransform;
-			PvzpScaleRotateTransformMatrix(aTransform, aPixelX, aPixelY, aRotation, 1, 1);
+			TodScaleRotateTransformMatrix(aTransform, aPixelX, aPixelY, -mBoard->mMainCounter * 2 * PI * 0.01f, 1, 1);
 
 			Image* aImageOverlay = Sexy::IMAGE_BEGHOULED_TWIST_OVERLAY;
 			Rect aSrcRect = Rect(0, 0, aImageOverlay->mWidth, aImageOverlay->mHeight);
-			PvzpBltMatrix(g, aImageOverlay, aTransform, g->mClipRect, Color(255, 255, 255, 128), g->mDrawMode, aSrcRect);
+			TodBltMatrix(g, aImageOverlay, aTransform, g->mClipRect, Color(255, 255, 255, 128), g->mDrawMode, aSrcRect);
 		}
 	}
 }
@@ -2403,23 +2559,26 @@ void Challenge::DrawBackdrop(Graphics* g)
 
 	if (mApp->IsWallnutBowlingLevel() && mShowBowlingLine)
 	{
-		g->DrawImage(Sexy::IMAGE_WALLNUT_BOWLINGSTRIPE, 268, 77);
+		g->DrawImage(Sexy::IMAGE_WALLNUT_BOWLINGSTRIPE, 268 + BOARD_ADDITIONAL_WIDTH, 77 + BOARD_OFFSET_Y);
 	}
 	if (mApp->mGameMode == GAMEMODE_PUZZLE_I_ZOMBIE_1 || mApp->mGameMode == GAMEMODE_PUZZLE_I_ZOMBIE_2 || mApp->mGameMode == GAMEMODE_PUZZLE_I_ZOMBIE_3 ||
 		mApp->mGameMode == GAMEMODE_PUZZLE_I_ZOMBIE_4 || mApp->mGameMode == GAMEMODE_PUZZLE_I_ZOMBIE_5)
 	{
-		g->DrawImage(Sexy::IMAGE_WALLNUT_BOWLINGSTRIPE, 352, 73);
+		g->DrawImage(Sexy::IMAGE_WALLNUT_BOWLINGSTRIPE, 352 + BOARD_ADDITIONAL_WIDTH, 73 + BOARD_OFFSET_Y);
 	}
 	if (mApp->mGameMode == GAMEMODE_PUZZLE_I_ZOMBIE_6 || mApp->mGameMode == GAMEMODE_PUZZLE_I_ZOMBIE_7 || mApp->mGameMode == GAMEMODE_PUZZLE_I_ZOMBIE_8 ||
 		mApp->mGameMode == GAMEMODE_PUZZLE_I_ZOMBIE_ENDLESS)
 	{
-		g->DrawImage(Sexy::IMAGE_WALLNUT_BOWLINGSTRIPE, 432, 73);
+		g->DrawImage(Sexy::IMAGE_WALLNUT_BOWLINGSTRIPE, 432 + BOARD_ADDITIONAL_WIDTH, 73 + BOARD_OFFSET_Y);
 	}
 	if (mApp->mGameMode == GAMEMODE_PUZZLE_I_ZOMBIE_9)
 	{
-		g->DrawImage(Sexy::IMAGE_WALLNUT_BOWLINGSTRIPE, 512, 73);
+		g->DrawImage(Sexy::IMAGE_WALLNUT_BOWLINGSTRIPE, 512 + BOARD_ADDITIONAL_WIDTH, 73 + BOARD_OFFSET_Y);
 	}
-
+	if (mApp->IsFootballLevel())
+	{
+		g->DrawImage(Sexy::IMAGE_WALLNUT_BOWLINGSTRIPE, 432 + BOARD_ADDITIONAL_WIDTH, 73 + BOARD_OFFSET_Y);
+	}
 	if (aGameMode == GAMEMODE_CHALLENGE_SLOT_MACHINE)
 	{
 		DrawSlotMachine(g);
@@ -2438,7 +2597,7 @@ void Challenge::PlantAdded(Plant* thePlant)
 		if (anArtSeed != SEED_NONE && anArtSeed == thePlant->mSeedType)
 		{
 			mApp->PlayFoley(FOLEY_ART_CHALLENGE);
-			mApp->AddPvzpParticle(thePlant->mX + 40, thePlant->mY + 40, RENDER_LAYER_TOP, PARTICLE_PRESENT_PICKUP);
+			mApp->AddTodParticle(thePlant->mX + 40, thePlant->mY + 40, RENDER_LAYER_TOP, PARTICLE_PRESENT_PICKUP);
 			CheckForCompleteArtChallenge(thePlant->mPlantCol, thePlant->mRow);
 		}
 	}
@@ -2448,6 +2607,10 @@ PlantingReason Challenge::CanPlantAt(int theGridX, int theGridY, SeedType theSee
 {
 	if (mApp->IsWallnutBowlingLevel())
 	{
+		if (mBoard->mTutorialState == TutorialState::TUTORIAL_GLOVE_PLANT && mBoard->mCursorObject->mCursorType == CursorType::CURSOR_TYPE_PLANT_FROM_GLOVE)
+		{
+			return PLANTING_OK;
+		}
 		return theGridX > 2 ? PLANTING_NOT_PASSED_LINE : PLANTING_OK;
 	}
 	else if (mApp->IsIZombieLevel())
@@ -2510,7 +2673,7 @@ void Challenge::InitZombieWavesSurvival()
 		mBoard->mZombieAllowed[ZOMBIE_TRAFFIC_CONE] = true;
 	}
 
-	int aCapacity = std::min(mSurvivalStage + 1, 9);
+	int aCapacity = min(mSurvivalStage + 1, 9);
 	while (aCapacity > 0)
 	{
 		ZombieType aRandZombie = (ZombieType)aLevelRNG.Next((unsigned long)NUM_ZOMBIE_TYPES);
@@ -2533,7 +2696,7 @@ void Challenge::InitZombieWavesFromList(ZombieType* theZombieList, int theListLe
 {
 	for (int i = 0; i < theListLength; i++)
 	{
-		mBoard->mZombieAllowed[theZombieList[i]] = true;
+		mBoard->mZombieAllowed[(int)theZombieList[i]] = true;
 	}
 }
 
@@ -2565,6 +2728,108 @@ void Challenge::InitZombieWaves()
 		aList[ZOMBIE_TRAFFIC_CONE] = true;
 		aList[ZOMBIE_DOLPHIN_RIDER] = true;
 		aList[ZOMBIE_POLEVAULTER] = true;
+	}
+	else if (aGameMode == GameMode::GAMEMODE_CHALLENGE_DYNAMIC_ROOF)
+	{
+		aList[ZOMBIE_NORMAL] = true;
+		aList[ZOMBIE_TRAFFIC_CONE] = true;
+		aList[ZOMBIE_PAIL] = true;
+		aList[ZOMBIE_POGO] = true;
+		aList[ZOMBIE_BUNGEE] = true;
+		aList[ZOMBIE_LADDER] = true;
+		aList[ZOMBIE_CATAPULT] = true;
+		aList[ZOMBIE_GARGANTUAR] = true;
+	}
+	else if (aGameMode == GameMode::GAMEMODE_CHALLENGE_INVISIPLANTS)
+	{
+		aList[ZOMBIE_NINJA] = true;
+		aList[ZOMBIE_NORMAL] = true;
+		aList[ZOMBIE_TRAFFIC_CONE] = true;
+		aList[ZOMBIE_NEWSPAPER] = true;
+		aList[ZOMBIE_FOOTBALL] = true;
+	}
+	else if (aGameMode == GameMode::GAMEMODE_CHALLENGE_RAINING_SEEDS_2)
+	{
+		aList[ZOMBIE_BRICK] = true;
+		aList[ZOMBIE_GARGANTUAR] = true;
+		aList[ZOMBIE_BUNGEE] = true;
+		aList[ZOMBIE_LADDER] = true;
+		aList[ZOMBIE_PAIL] = true;
+		aList[ZOMBIE_NORMAL] = true;
+		aList[ZOMBIE_TRAFFIC_CONE] = true;
+	}
+	else if (aGameMode == GameMode::GAMEMODE_CHALLENGE_WE_SMASH)
+	{
+		aList[ZOMBIE_GARGANTUAR] = true;
+		aList[ZOMBIE_REDEYE_GARGANTUAR] = true;
+		aList[ZOMBIE_BLEUEYE_GARGANTUAR] = true;
+		aList[ZOMBIE_EXA_GARGANTUAR] = true;
+
+	}
+	else if (aGameMode == GameMode::GAMEMODE_CHALLENGE_RANDOM_SLOTS)
+	{
+		aList[ZOMBIE_CATAPULT] = true;
+		aList[ZOMBIE_ZAMBONI] = true;
+		aList[ZOMBIE_PAIL] = true;
+		aList[ZOMBIE_TRAFFIC_CONE] = true;
+		aList[ZOMBIE_NORMAL] = true;
+	}
+	else if (aGameMode == GameMode::GAMEMODE_CHALLENGE_ADV2_1)
+	{
+		aList[ZOMBIE_BRICK] = true;
+	}
+	else if (aGameMode == GameMode::GAMEMODE_CHALLENGE_ADV2_2)
+	{
+		aList[ZOMBIE_PAIL] = true; 
+		aList[ZOMBIE_TRAFFIC_CONE] = true;
+		aList[ZOMBIE_BRICK] = true;
+		aList[ZOMBIE_NORMAL] = true;
+		aList[ZOMBIE_DIGGER] = true;
+		aList[ZOMBIE_BALLOON] = true;
+	}
+	else if (aGameMode == GameMode::GAMEMODE_CHALLENGE_ADV2_3)
+	{
+		aList[ZOMBIE_SUNDYEDITION] = true;
+		aList[ZOMBIE_NEWSPAPER] = true;
+		aList[ZOMBIE_TRAFFIC_CONE] = true;
+		aList[ZOMBIE_NORMAL] = true;
+	}
+	else if (aGameMode == GameMode::GAMEMODE_CHALLENGE_ADV2_4)
+	{
+		aList[ZOMBIE_GARGANTUAR] = true;
+		aList[ZOMBIE_SUNDYEDITION] = true;
+		aList[ZOMBIE_NEWSPAPER] = true;
+		aList[ZOMBIE_PAIL] = true;
+		aList[ZOMBIE_DIGGER] = true;
+	}
+	else if (aGameMode == GameMode::GAMEMODE_CHALLENGE_ADV2_5)
+	{
+		aList[ZOMBIE_FOOTBALL] = true;
+		aList[ZOMBIE_POLEVAULTER] = true;
+		aList[ZOMBIE_ZAMBONI] = true;
+		aList[ZOMBIE_POGO] = true;
+		aList[ZOMBIE_DIGGER] = true;
+		aList[ZOMBIE_BOBSLED] = true;
+		aList[ZOMBIE_BALLOON] = true;
+	}
+	else if (aGameMode == GameMode::GAMEMODE_CHALLENGE_PROTECT_PLANTS)
+	{
+		aList[ZOMBIE_NORMAL] = true;
+		aList[ZOMBIE_TRAFFIC_CONE] = true;
+		aList[ZOMBIE_PAIL] = true;
+		aList[ZOMBIE_GARGANTUAR] = true;
+		aList[ZOMBIE_DIGGER] = true;
+		aList[ZOMBIE_LADDER] = true;
+		aList[ZOMBIE_BUNGEE] = true;
+	}
+	else if (aGameMode == GameMode::GAMEMODE_CHALLENGE_INFLATION)
+	{
+		aList[ZOMBIE_NORMAL] = true;
+		aList[ZOMBIE_TRAFFIC_CONE] = true;
+		aList[ZOMBIE_PAIL] = true;
+		aList[ZOMBIE_BRICK] = true;
+		aList[ZOMBIE_CATAPULT] = true;
+		aList[ZOMBIE_NINJA] = true;
 	}
 	else if (aGameMode == GAMEMODE_CHALLENGE_POGO_PARTY)
 	{
@@ -2734,7 +2999,7 @@ void Challenge::InitZombieWaves()
 		aList[ZOMBIE_TRAFFIC_CONE] = true;
 		aList[ZOMBIE_PAIL] = true;
 	}
-
+	
 	if (mApp->CanSpawnYetis() && !mApp->IsWhackAZombieLevel() && !mApp->IsLittleTroubleLevel())
 		aList[ZOMBIE_YETI] = true;
 }
@@ -2742,7 +3007,7 @@ void Challenge::InitZombieWaves()
 void Challenge::WhackAZombiePlaceGraves(int theGraveCount)
 {
 	int aPickCount = 0;
-	PvzpWeightedGridArray aPicks[36];
+	TodWeightedGridArray aPicks[36];
 
 	for (int aCol = 3; aCol < MAX_GRID_SIZE_X; aCol++)
 	{
@@ -2751,26 +3016,26 @@ void Challenge::WhackAZombiePlaceGraves(int theGraveCount)
 			if (!mBoard->CanAddGraveStoneAt(aCol, aRow))
 				continue;
 
-			PvzpWeightedGridArray* aPick = &aPicks[aPickCount++];
-			aPick->mWeight = mBoard->GetTopPlantAt(aCol, aRow, TOPPLANT_ANY) ? 1 : 100000;
+			TodWeightedGridArray* aPick = &aPicks[aPickCount++];
+			aPick->mWeight = mBoard->GetTopPlantAt(aCol, aRow, TOPPLANT_ANY) ? 100000 : 1;
 			aPick->mX = aCol;
 			aPick->mY = aRow;
 		}
 	}
 
-	theGraveCount = std::min(theGraveCount, aPickCount);
+	if (theGraveCount > aPickCount)
+		theGraveCount = aPickCount;
 
 	if (aPickCount == 0 || theGraveCount <= 0)
 		return;
 
 	for (int i = 0; i < theGraveCount; i++)
 	{
-		PvzpWeightedGridArray* aPick = PvzpPickFromWeightedGridArray(aPicks, aPickCount);
+		TodWeightedGridArray* aPick = TodPickFromWeightedGridArray(aPicks, aPickCount);
 
-		for (Plant* aPlant : mBoard->mPlants)
+		Plant* aPlant = nullptr;
+		while (mBoard->IteratePlants(aPlant))
 		{
-			if (aPlant->mDead)
-				continue;
 			if (aPlant->mPlantCol == aPick->mX && aPlant->mRow == aPick->mY)
 			{
 				aPlant->Die();
@@ -2791,7 +3056,7 @@ void Challenge::WhackAZombieSpawning()
 	if (mBoard->mZombieCountDown == 100 && mBoard->mCurrentWave > 0)
 	{
 		int aNumGraves = 5 - mBoard->GetGraveStonesCount();
-		WhackAZombiePlaceGraves(std::max(1, aNumGraves));
+		WhackAZombiePlaceGraves(max(1, aNumGraves));
 	}
 	if (mBoard->mZombieCountDown == 5)
 	{
@@ -2801,7 +3066,7 @@ void Challenge::WhackAZombieSpawning()
 	{
 		mBoard->mZombieCountDown = 2000;
 		mBoard->mZombieCountDownStart = mBoard->mZombieCountDown;
-		if (mBoard->mCurrentWave < mBoard->mNumWaves) mBoard->mCurrentWave++;
+		mBoard->mCurrentWave++;
 		mChallengeStateCounter = mBoard->mCurrentWave == mBoard->mNumWaves ? 300 : 1;
 	}
 	else if (mBoard->mZombieCountDown < 300)
@@ -2811,8 +3076,7 @@ void Challenge::WhackAZombieSpawning()
 
 	if (--mChallengeStateCounter == 0)
 	{
-		int aPhase = std::clamp((mBoard->mCurrentWave - 1) * 6 / 12, 0, 5);
-		// Per-phase weights for cone/pail zombies and for 2- or 3-zombie groups
+		int aPhase = ClampInt((mBoard->mCurrentWave - 1) * 6 / 12, 0, 5);
 		const int aDoubleChance[6] = { 0, 30, 10, 10, 15, 18 };
 		const int aTripleChance[6] = { 0, 0, 0, 0, 10, 13 };
 		const int aPailChance[6] = { 0, 0, 0, 10, 15, 15 };
@@ -2821,7 +3085,7 @@ void Challenge::WhackAZombieSpawning()
 		ZombieType aZombieType = ZOMBIE_NORMAL;
 		int aNumHit = Rand(100);
 		int aTypeHit = Rand(100);
-		int aIsFinalWave = mBoard->mCurrentWave == mBoard->mNumWaves;
+		bool aIsFinalWave = mBoard->mCurrentWave == mBoard->mNumWaves;
 
 		if (aIsFinalWave)
 		{
@@ -2845,31 +3109,33 @@ void Challenge::WhackAZombieSpawning()
 			aZombieType = ZOMBIE_TRAFFIC_CONE;
 		}
 
-		PvzpWeightedArray aGridPicks[MAX_GRAVE_STONES];
+		TodWeightedArray aGridPicks[MAX_GRAVE_STONES];
 		int aGridPicksCount = 0;
 
-		for (GridItem* aGridItem : mBoard->mGridItems)
+		GridItem* aGridItem = nullptr;
+		while(mBoard->IterateGridItems(aGridItem))
 		{
-			if (aGridItem->mDead)
-				continue;
-			if (aGridItem->mGridItemType == GRIDITEM_GRAVESTONE)
+			if (aGridItem->mGridItemType == GRIDITEM_GRAVESTONE || aGridItem->mGridItemType == GRIDITEM_PVZ2_GRAVE)
 			{
 				Plant* aPlant = mBoard->GetTopPlantAt(aGridItem->mGridX, aGridItem->mGridY, TOPPLANT_ONLY_NORMAL_POSITION);
 				if (aPlant == nullptr || aPlant->mSeedType != SEED_GRAVEBUSTER)
 				{
-					aGridPicks[aGridPicksCount].mItem = reinterpret_cast<intptr_t>(aGridItem);
+					aGridPicks[aGridPicksCount].mItem = (int)aGridItem;
 					aGridPicks[aGridPicksCount].mWeight = 1;
 					aGridPicksCount++;
 				}
 			}
 		}
-		float aMaxSpeed = PvzpAnimateCurve(1, 12, mBoard->mCurrentWave, 1, 3, CURVE_EASE_IN);
-		aZombieCount = std::min(aZombieCount, aGridPicksCount);
+		float aMaxSpeed = TodAnimateCurve(1, 12, mBoard->mCurrentWave, 1, 3, CURVE_EASE_IN);
+		if (aZombieCount > aGridPicksCount)
+		{
+			aZombieCount = aGridPicksCount;
+		}
 
 		for (int i = 0; i < aZombieCount; i++)
 		{
-			PvzpWeightedArray* aGrid = PvzpPickArrayItemFromWeightedArray(aGridPicks, aGridPicksCount);
-			GridItem* aGraveStone = reinterpret_cast<GridItem*>(aGrid->mItem);
+			TodWeightedArray* aGrid = TodPickArrayItemFromWeightedArray(aGridPicks, aGridPicksCount);
+			GridItem* aGraveStone = (GridItem*)aGrid->mItem;
 			aGrid->mWeight = 0;
 
 			if (aIsFinalWave)
@@ -2878,7 +3144,7 @@ void Challenge::WhackAZombieSpawning()
 				aMaxSpeed = 2;
 			}
 
-			Zombie* aZombie = mBoard->AddZombie(aZombieType, mBoard->mCurrentWave);
+			Zombie* aZombie = mBoard->AddZombie(aZombieType, mBoard->mCurrentWave, true);
 			if (aZombie == nullptr)
 				break;
 
@@ -2888,8 +3154,8 @@ void Challenge::WhackAZombieSpawning()
 			aZombie->UpdateAnimSpeed();
 		}
 
-		int aStateCounterMin = PvzpAnimateCurve(1, 12, mBoard->mCurrentWave, 100, 30, CURVE_LINEAR);
-		int aStateCounterMax = PvzpAnimateCurve(1, 12, mBoard->mCurrentWave, 200, 60, CURVE_LINEAR);
+		int aStateCounterMin = TodAnimateCurve(1, 12, mBoard->mCurrentWave, 100, 30, CURVE_LINEAR);
+		int aStateCounterMax = TodAnimateCurve(1, 12, mBoard->mCurrentWave, 200, 60, CURVE_LINEAR);
 		mChallengeStateCounter = RandRangeInt(aStateCounterMin, aStateCounterMax);
 		if (aIsFinalWave)
 		{
@@ -2899,13 +3165,11 @@ void Challenge::WhackAZombieSpawning()
 	}
 }
 
-int Challenge::UpdateZombieSpawning()
+bool Challenge::UpdateZombieSpawning()
 {
 	if (mApp->IsWhackAZombieLevel())
 	{
 		WhackAZombieSpawning();
-		//@Minerscale: Need to return truthy value to prevent normal spawning
-		return true;
 	}
 	else return
 		mApp->IsFinalBossLevel() ||
@@ -2921,10 +3185,9 @@ int Challenge::UpdateZombieSpawning()
 
 void Challenge::GraveDangerSpawnGraveAt(int theGridX, int theGridY)
 {
-	for (Plant* aPlant : mBoard->mPlants)
+	Plant* aPlant = nullptr;
+	while (mBoard->IteratePlants(aPlant))
 	{
-		if (aPlant->mDead)
-			continue;
 		if (aPlant->mPlantCol == theGridX && aPlant->mRow == theGridY)
 		{
 			aPlant->Die();
@@ -2942,7 +3205,7 @@ void Challenge::GraveDangerSpawnGraveAt(int theGridX, int theGridY)
 void Challenge::GraveDangerSpawnRandomGrave()
 {
 	int aPickCount = 0;
-	PvzpWeightedGridArray aPicks[30];
+	TodWeightedGridArray aPicks[30];
 
 	for (int aCol = 4; aCol < MAX_GRID_SIZE_X; aCol++)
 	{
@@ -2950,8 +3213,7 @@ void Challenge::GraveDangerSpawnRandomGrave()
 		{
 			if (mBoard->CanAddGraveStoneAt(aCol, aRow))
 			{
-				// Source: https://wiki.pvz1.com/doku.php?id=%E6%94%BB%E7%95%A5:%E5%A2%93%E7%A2%91
-				aPicks[aPickCount].mWeight = mBoard->GetTopPlantAt(aCol, aRow, TOPPLANT_ANY) ? 1 : 100000;
+				aPicks[aPickCount].mWeight = mBoard->GetTopPlantAt(aCol, aRow, TOPPLANT_ANY) ? 100000 : 1;
 				aPicks[aPickCount].mX = aCol;
 				aPicks[aPickCount].mY = aRow;
 				aPickCount++;
@@ -2961,7 +3223,7 @@ void Challenge::GraveDangerSpawnRandomGrave()
 
 	if (aPickCount)
 	{
-		PvzpWeightedGridArray* aPick = PvzpPickFromWeightedGridArray(aPicks, aPickCount);
+		TodWeightedGridArray* aPick = TodPickFromWeightedGridArray(aPicks, aPickCount);
 		GraveDangerSpawnGraveAt(aPick->mX, aPick->mY);
 	}
 }
@@ -2985,7 +3247,7 @@ void Challenge::SpawnZombieWave()
 		}
 	}
 
-	int aIsFlagWave = mBoard->IsFlagWave(mBoard->mCurrentWave);
+	bool aIsFlagWave = mBoard->IsFlagWave(mBoard->mCurrentWave);
 	if (mApp->mGameMode == GAMEMODE_CHALLENGE_GRAVE_DANGER && mBoard->mCurrentWave != mBoard->mNumWaves - 1)
 	{
 		if (aIsFlagWave)
@@ -3000,8 +3262,7 @@ void Challenge::SpawnZombieWave()
 	if (mApp->IsSurvivalMode() && mBoard->mBackground == BACKGROUND_2_NIGHT && mBoard->mCurrentWave == mBoard->mNumWaves - 1)
 	{
 		int aNumGraves = mBoard->GetGraveStonesCount();
-		int aGraveLimit = mApp->IsSurvivalNormal(mApp->mGameMode) ? 8 : 12;
-		if (aNumGraves < aGraveLimit)
+		if ((mApp->IsSurvivalNormal(mApp->mGameMode) && aNumGraves < 8) || aNumGraves < 12)
 		{
 			GraveDangerSpawnRandomGrave();
 		}
@@ -3011,35 +3272,49 @@ void Challenge::SpawnZombieWave()
 		mBoard->DisplayAdvice("[ADVICE_BUNGEES_INCOMING]", MESSAGE_STYLE_HINT_FAST, ADVICE_NONE);
 	}
 }
-
-void Challenge::DrawStormFlash(Graphics* g, int theTime, int theMaxAmount)
-{
-	MTRand aDrawRand = MTRand(mBoard->mMainCounter / 6);
-	int aDarkness = PvzpAnimateCurve(150, 0, theTime, 255 - theMaxAmount, 255, CURVE_LINEAR) + aDrawRand.NextNoAssert((unsigned long)64) - 32;
-	g->SetColor(Color(0, 0, 0, std::clamp(aDarkness, 0, 255)));
-	g->FillRect(-1000, -1000, 2800, 2600);
-
-	g->SetColor(Color(255, 255, 255, PvzpAnimateCurve(150, 75, theTime, theMaxAmount, 0, CURVE_LINEAR)));
-	g->FillRect(-1000, -1000, 2800, 2600);
-}
-
 void Challenge::DrawWeather(Graphics* g)
 {
-	if (mApp->IsStormyNightLevel() || mApp->mGameMode == GAMEMODE_CHALLENGE_RAINING_SEEDS)
-		DrawRain(g);
+	bool shouldRain = false;
+	if (mApp->IsStormyNightLevel() || mApp->mGameMode == GAMEMODE_CHALLENGE_RAINING_SEEDS || mApp->mGameMode == GAMEMODE_CHALLENGE_RAINING_SEEDS_2 || (mApp->mGameMode >= GAMEMODE_CHALLENGE_ADV2_1 && mApp->mGameMode <= GAMEMODE_CHALLENGE_ADV2_5))
+		shouldRain = true;
 
-	if (mApp->IsStormyNightLevel())
+	if (shouldRain) DrawRain(g);
+
+	if (mApp->IsStormyNightLevel()|| mBoard->mLevel == 55)
+	{
 		DrawStormNight(g);
+	}
 }
-
 void Challenge::DrawRain(Graphics* g)
 {
-	if (mBoard->mCutScene->IsBeforePreloading() || !mApp->Is3DAccelerated())
+	if (mBoard->mCutScene->IsBeforePreloading() || !mApp->Is3dAccel())
 		return;
+	int rainAlpha = 90;
+	if (mBoard->mEclipseCounter > 0)
+	{
+		if (mBoard->mEclipseCounter > 19500)
+			rainAlpha = ((mBoard->mEclipseCounter - 19500) * 90) / 500;
+		else if (mBoard->mEclipseCounter > 500)
+			rainAlpha = 0;
+		else
+			rainAlpha = ((500 - mBoard->mEclipseCounter) * 90) / 500;
+	}
+	else if (mApp->mGameMode == GameMode::GAMEMODE_CHALLENGE_DYNAMIC_ROOF)
+	{
+		rainAlpha = (int)(90.0f * (1.0f - mBoard->mRoofTransitionAlpha / 255.0f));
+	}
+	else
+	{
+		float nightFactor = mBoard->mStartsAsDay ? (mBoard->mGlobalTimeAlpha / 255.0f) : (1.0f - (mBoard->mGlobalTimeAlpha / 255.0f));
+		rainAlpha = (int)(90.0f * nightFactor);
+	}
 
-	// Whatever is going on here is a bit yikes
+	if (rainAlpha > 0)
+	{
+		g->SetColor(Color(0, 0, 0, rainAlpha));
+		g->FillRect(-1000, -1000, BOARD_WIDTH + 2000, BOARD_HEIGHT + 2000);
+	}
 	int aBoardOffsetX;
-	/*
 	if (aBoardOffsetX > 0)
 	{
 		aBoardOffsetX = (mBoard->mX + 100) / 100 * -100;
@@ -3048,28 +3323,21 @@ void Challenge::DrawRain(Graphics* g)
 	{
 		aBoardOffsetX = mBoard->mX / 100 * -100;
 	}
-	*/
-
-	aBoardOffsetX = mBoard->mX / 100 * -100;
-
-	const uint32_t aTime = mBoard->mEffectCounter;
-	int aTimeOffsetXEst = PvzpAnimateCurve(0, 100, static_cast<int>(aTime % 100u), 0, -100, CURVE_LINEAR);
-	int aTimeOffsetYEst = PvzpAnimateCurve(0, 20, static_cast<int>(aTime % 20u), -100, 0, CURVE_LINEAR);
-
-	// Draw the distant rain
+	int aTime = mBoard->mEffectCounter % 100;
+	int aTimeOffsetXEst = TodAnimateCurve(0, 100, aTime, 0, -100, CURVE_LINEAR);
+	int aTimeOffsetYEst = TodAnimateCurve(0, 20, aTime % 20, -100, 0, CURVE_LINEAR);
 	for (int aHorCnt = 9; aHorCnt > 0; aHorCnt--)
 	{
 		for (int aVerCnt = 7; aVerCnt > 0; aVerCnt--)
 		{
-			int aImageX = aTimeOffsetXEst + 100 * aHorCnt + aBoardOffsetX;
-			int aImageY = aTimeOffsetYEst + 100 * aVerCnt;
+			int aImageX = aHorCnt * 100 + aTimeOffsetXEst + aBoardOffsetX;
+			int aImageY = aVerCnt * 100 + aTimeOffsetYEst;
 			g->DrawImage(Sexy::IMAGE_RAIN, aImageX, aImageY);
 		}
 	}
-
-	float aTimeOffsetXCls = PvzpAnimateCurve(0, 161, static_cast<int>(aTime % 161u), 0, -100, CURVE_LINEAR);
-	float aTimeOffsetYCls = PvzpAnimateCurve(0, 33, static_cast<int>(aTime % 33u), -100, 0, CURVE_LINEAR);
-	// Draw the nearby rain
+	aTime = mBoard->mEffectCounter;
+	float aTimeOffsetXCls = TodAnimateCurve(0, 161, aTime % 161, 0, -100, CURVE_LINEAR);
+	float aTimeOffsetYCls = TodAnimateCurve(0, 33, aTime % 33, -100, 0, CURVE_LINEAR);
 	for (int aHorCnt = 0; aHorCnt < 9; aHorCnt++)
 	{
 		for (int aVerCnt = 0; aVerCnt < 7; aVerCnt++)
@@ -3077,13 +3345,16 @@ void Challenge::DrawRain(Graphics* g)
 			float aRainScaleCls = 1.5f;
 			float aImageClsX = (aHorCnt * 100 + aTimeOffsetXCls) * aRainScaleCls + aBoardOffsetX;
 			float aImageClsY = (aVerCnt * 100 + aTimeOffsetYCls) * aRainScaleCls;
-			PvzpDrawImageScaledF(g, Sexy::IMAGE_RAIN, aImageClsX, aImageClsY, aRainScaleCls, aRainScaleCls);
+			TodDrawImageScaledF(g, Sexy::IMAGE_RAIN, aImageClsX, aImageClsY, aRainScaleCls, aRainScaleCls);
 		}
 	}
+	mBoard->DrawUIBottom(g);
+	mBoard->DrawTopRightUI(g);
 }
 
 void Challenge::DrawStormNight(Graphics* g)
 {
+
 	if (mChallengeState == STATECHALLENGE_STORM_FLASH_1 && mChallengeStateCounter < 300)
 	{
 		if (mChallengeStateCounter > STORM_FLASH_TIME)
@@ -3105,14 +3376,200 @@ void Challenge::DrawStormNight(Graphics* g)
 	}
 	else
 	{
-		g->SetColor(Color::Black);
-		g->FillRect(-1000, -1000, BOARD_WIDTH + 2000, BOARD_HEIGHT + 2000);
-	}
+		Graphics aClipG(*g);
+		Image* aImage = Sexy::IMAGE_WHITEDOT; 
+		int width = aImage->GetWidth();
+		int height = aImage->GetHeight();
+		int layerWidth = 1280;
+		int layerHeight = 720;
+		int minX = -g->mTransX;
+		int minY = -g->mTransY;
+		MemoryImage* darkImage = mApp->mReanimatorCache->MakeBlankMemoryImage(layerWidth, layerHeight);
+		MemoryImage* anAlphaImage = mApp->mReanimatorCache->MakeBlankMemoryImage(layerWidth, layerHeight);
+		Graphics aDarkG(darkImage);
+		aDarkG.SetColor(Color(0, 0, 0, 255));
+		aDarkG.FillRect(0, 0, layerWidth, layerHeight);
+		Graphics aAlphaG(anAlphaImage);
+		aAlphaG.SetColor(Color(255, 255, 255, 255));
+		aAlphaG.FillRect(0, 0, layerWidth, layerHeight);
+		aAlphaG.SetColorizeImages(true);
+		aAlphaG.SetColor(Color(0, 0, 0, 255));
+		for (int col = 0; col < MAX_GRID_SIZE_X; col++)
+		{
+			for (int row = 0; row <= (mBoard->StageHas6Rows() ? MAX_GRID_SIZE_Y : MAX_GRID_SIZE_Y - 1); row++)
+			{
+				Plant* aPlant = mBoard->GetTopPlantAt(col, row, PlantPriority::TOPPLANT_ONLY_NORMAL_POSITION);
+				if (aPlant && aPlant->mSeedType == SeedType::SEED_PLANTERN)
+				{
+					if (aPlant->mHasBooster)
+					{
+						aAlphaG.SetColor(Color(0, 0, 0, 255));
+						aAlphaG.FillRect(0, 0, layerWidth, layerHeight);
+					}
+					else
+					{
+						float pX = aPlant->mX + (aPlant->mWidth / 2.0f) - (width / 2.0f) - minX;
+						float pY = aPlant->mY + (aPlant->mHeight / 2.0f) - (height / 2.0f) - minY;
+						aAlphaG.DrawImage(aImage, (int)pX, (int)pY);
+					}
+				}
+			}
+		}
+		if (mBoard->mLevel == 55)
+		{
+			int boardMouseX = mApp->mWidgetManager->mLastMouseX - mBoard->mX;
+			int boardMouseY = mApp->mWidgetManager->mLastMouseY - mBoard->mY;
+			float pX = boardMouseX - (width / 2.0f) - minX;
+			float pY = boardMouseY - (height / 2.0f) - minY;
+			aAlphaG.DrawImage(aImage, (int)pX, (int)pY);
+		}
+		aAlphaG.SetColorizeImages(false);
 
+		unsigned long* aMasterRowPtr = darkImage->mBits;
+		unsigned long* aRowPtr = aMasterRowPtr;
+		unsigned long* anAlphaBits = anAlphaImage->mBits;
+
+		for (int y = 0; y < layerHeight; y++)
+		{
+			unsigned long* aDestPtr = aRowPtr;
+			for (int x = 0; x < layerWidth; x++)
+			{
+				*aDestPtr = (*aDestPtr & 0x00FFFFFF) | ((*anAlphaBits & 0xFF) << 24);
+				++anAlphaBits;
+				++aDestPtr;
+			}
+			aRowPtr += darkImage->mWidth;
+		}
+
+		darkImage->BitsChanged();
+
+		aClipG.SetColorizeImages(true);
+		aClipG.SetColor(Color::White);
+		aClipG.DrawImage(darkImage, minX, minY);
+		aClipG.SetColorizeImages(false);
+
+		delete anAlphaImage;
+		delete darkImage;
+	}
 	mBoard->DrawUIBottom(g);
 	mBoard->DrawTopRightUI(g);
 }
+void Challenge::DrawStormFlash(Graphics* g, int theTime, int theMaxAmount)
+{
+	MTRand aDrawRand = MTRand(mBoard->mMainCounter / 6);
+	int aDarkness = TodAnimateCurve(150, 0, theTime, 255 - theMaxAmount, 255, TodCurves::CURVE_LINEAR) + aDrawRand.NextNoAssert((unsigned long)64) - 32;
 
+	Graphics aClipG(*g);
+	Image* aImage = Sexy::IMAGE_WHITEDOT;
+	int width = aImage->GetWidth();
+	int height = aImage->GetHeight();
+
+	int layerWidth = 1280;
+	int layerHeight = 720;
+	int minX = -g->mTransX;
+	int minY = -g->mTransY;
+
+	Color black = Color(0, 0, 0, ClampInt(aDarkness, 0, 255));
+	Color white = Color(255, 255, 255, TodAnimateCurve(150, 75, theTime, theMaxAmount, 0, TodCurves::CURVE_LINEAR));
+
+	g->SetColor(black);
+	g->FillRect(minX, minY, layerWidth, layerHeight);
+
+	g->SetColor(white);
+	g->FillRect(minX, minY, layerWidth, layerHeight);
+
+	MemoryImage* darkImage = mApp->mReanimatorCache->MakeBlankMemoryImage(layerWidth, layerHeight);
+	Graphics darkLayer(darkImage);
+	darkLayer.SetColor(Color::Black);
+	darkLayer.FillRect(0, 0, layerWidth, layerHeight);
+
+	MemoryImage* brightImage = mApp->mReanimatorCache->MakeBlankMemoryImage(layerWidth, layerHeight);
+	Graphics brightLayer(brightImage);
+	brightLayer.SetColor(Color::White);
+	brightLayer.FillRect(0, 0, layerWidth, layerHeight);
+
+	MemoryImage* anAlphaImage = mApp->mReanimatorCache->MakeBlankMemoryImage(layerWidth, layerHeight);
+	Graphics alphaLayer(anAlphaImage);
+	alphaLayer.SetColor(Color::White);
+	alphaLayer.FillRect(0, 0, layerWidth, layerHeight);
+
+	for (int col = 0; col < MAX_GRID_SIZE_X; col++)
+	{
+		for (int row = 0; row <= (mBoard->StageHas6Rows() ? MAX_GRID_SIZE_Y : MAX_GRID_SIZE_Y - 1); row++)
+		{
+			Plant* aPlant = mBoard->GetTopPlantAt(col, row, PlantPriority::TOPPLANT_ONLY_NORMAL_POSITION);
+			if (aPlant && aPlant->mSeedType == SeedType::SEED_PLANTERN)
+			{
+				if (aPlant->mHasBooster)
+				{
+					alphaLayer.SetColor(Color(0, 0, 0, 255));
+					alphaLayer.FillRect(0, 0, layerWidth, layerHeight);
+				}
+				else
+				{
+					float pX = aPlant->mX + (aPlant->mWidth / 2.0f) - (width / 2.0f) - minX;
+					float pY = aPlant->mY + (aPlant->mHeight / 2.0f) - (height / 2.0f) - minY;
+					alphaLayer.DrawImage(aImage, (int)pX, (int)pY);
+				}
+			}
+		}
+	}
+	if (mBoard->mLevel == 55)
+	{
+		int boardMouseX = mApp->mWidgetManager->mLastMouseX - mBoard->mX;
+		int boardMouseY = mApp->mWidgetManager->mLastMouseY - mBoard->mY;
+		float pX = boardMouseX - (width / 2.0f) - minX;
+		float pY = boardMouseY - (height / 2.0f) - minY;
+		alphaLayer.DrawImage(aImage, (int)pX, (int)pY);
+	}
+	unsigned long* darkRowPtr = darkImage->mBits;
+	unsigned long* darkAlphaBits = anAlphaImage->mBits;
+	unsigned long* brightRowPtr = brightImage->mBits;
+	unsigned long* brightAlphaBits = anAlphaImage->mBits;
+
+	for (int y = 0; y < layerHeight; y++)
+	{
+		unsigned long* darkDestPtr = darkRowPtr;
+		for (int x = 0; x < layerWidth; x++)
+		{
+			*darkDestPtr = (*darkDestPtr & 0x00FFFFFF) | ((*darkAlphaBits & 0xFF) << 24);
+			++darkAlphaBits;
+			++darkDestPtr;
+		}
+		darkRowPtr += darkImage->mWidth;
+	}
+	darkImage->BitsChanged();
+
+	brightAlphaBits = anAlphaImage->mBits;
+	for (int y = 0; y < layerHeight; y++)
+	{
+		unsigned long* brightDestPtr = brightRowPtr;
+		for (int x = 0; x < layerWidth; x++)
+		{
+			*brightDestPtr = (*brightDestPtr & 0x00FFFFFF) | ((*brightAlphaBits & 0xFF) << 24);
+			++brightAlphaBits;
+			++brightDestPtr;
+		}
+		brightRowPtr += brightImage->mWidth;
+	}
+	brightImage->BitsChanged();
+
+	aClipG.SetColorizeImages(true);
+	aClipG.SetColor(Color::White);
+
+	aClipG.mColor.mAlpha = black.mAlpha;
+	aClipG.DrawImage(darkImage, minX, minY);
+
+	aClipG.mColor.mAlpha = white.mAlpha;
+	aClipG.DrawImage(brightImage, minX, minY);
+	aClipG.SetColorizeImages(false);
+
+	delete anAlphaImage;
+	delete darkImage;
+	delete brightImage;
+	mBoard->DrawUIBottom(g);
+	mBoard->DrawTopRightUI(g);
+}
 void Challenge::PlayBossEnter()
 {
 	mBoard->AddZombie(ZOMBIE_BOSS, 0);
@@ -3122,7 +3579,7 @@ void Challenge::PortalStart()
 {
 	mChallengeStateCounter = 9000;
 	GridItem* aPortal;
-
+	
 	aPortal = mBoard->mGridItems.DataArrayAlloc();
 	aPortal->mGridItemType = GRIDITEM_PORTAL_SQUARE;
 	aPortal->mGridX = 2;
@@ -3162,20 +3619,19 @@ void Challenge::UpdatePortal(GridItem* thePortal)
 	if (anOtherPortal == nullptr)
 		return;
 
-	for (Zombie* aZombie : mBoard->mZombies)
+	Zombie* aZombie = nullptr;
+	while (mBoard->IterateZombies(aZombie))
 	{
-		if (aZombie->mDead)
-			continue;
 		if (aZombie->mRow == thePortal->mGridY && aZombie->mLastPortalX != thePortal->mGridX)
 		{
 			Rect aZombieRect = aZombie->GetZombieRect();
 			int aZombieX = aZombieRect.mX + aZombieRect.mWidth / 2;
-			int aPortalX = thePortal->mGridX * 80 + 25;
+			int aPortalX = thePortal->mGridX * 80 + 25 + BOARD_ADDITIONAL_WIDTH;
 			if (abs(aZombieX - aPortalX) <= 45)
 			{
 				int aDiffX = aZombieX - aZombie->mX;
 				if (aZombie->IsWalkingBackwards()) aDiffX -= 60;
-				aZombie->mX = anOtherPortal->mGridX * 80 - aDiffX;
+				aZombie->mX = anOtherPortal->mGridX * 80 - aDiffX + BOARD_ADDITIONAL_WIDTH;
 				aZombie->mPosX = aZombie->mX;
 
 				aZombie->SetRow(anOtherPortal->mGridY);
@@ -3187,19 +3643,18 @@ void Challenge::UpdatePortal(GridItem* thePortal)
 		}
 	}
 
-	for (Projectile* aProjectile : mBoard->mProjectiles)
+	Projectile* aProjectile = nullptr;
+	while(mBoard->IterateProjectiles(aProjectile))
 	{
-		if (aProjectile->mDead)
-			continue;
 		if (aProjectile->mMotionType == MOTION_STRAIGHT && aProjectile->mRow == thePortal->mGridY && aProjectile->mLastPortalX != thePortal->mGridX)
 		{
 			Rect aProjectileRect = aProjectile->GetProjectileRect();
 			int aProjectileX = aProjectileRect.mX + aProjectileRect.mWidth / 2;
-			int aPortalX = thePortal->mGridX * 80 + 55;
+			int aPortalX = thePortal->mGridX * 80 + 55 + BOARD_ADDITIONAL_WIDTH;
 			if (abs(aProjectileX - aPortalX) <= 40)
 			{
 				int aDeltaY = (anOtherPortal->mGridY - thePortal->mGridY) * 100;
-				aProjectile->mX += anOtherPortal->mGridX * 80 - aProjectileX + 60;
+				aProjectile->mX += anOtherPortal->mGridX * 80 - aProjectileX + 60 + BOARD_ADDITIONAL_WIDTH;
 				aProjectile->mPosX = aProjectile->mX;
 
 				aProjectile->mRow = anOtherPortal->mGridY;
@@ -3213,17 +3668,16 @@ void Challenge::UpdatePortal(GridItem* thePortal)
 		}
 	}
 
-	for (LawnMower* aLawnMower : mBoard->mLawnMowers)
+	LawnMower* aLawnMower = nullptr;
+	while (mBoard->IterateLawnMowers(aLawnMower))
 	{
-		if (aLawnMower->mDead)
-			continue;
 		if (aLawnMower->mMowerState == MOWER_TRIGGERED && aLawnMower->mRow == thePortal->mGridY && aLawnMower->mLastPortalX != thePortal->mGridX)
 		{
 			int aMowerX = aLawnMower->mPosX + 45;
-			int aPortalX = thePortal->mGridX * 80 + 25;
+			int aPortalX = thePortal->mGridX * 80 + 25 + BOARD_ADDITIONAL_WIDTH;
 			if (abs(aMowerX - aPortalX) <= 20)
 			{
-				aLawnMower->mPosX = anOtherPortal->mGridX * 80 + 25;
+				aLawnMower->mPosX = anOtherPortal->mGridX * 80 + 25 + BOARD_ADDITIONAL_WIDTH;
 				aLawnMower->mRow = anOtherPortal->mGridY;
 				aLawnMower->mPosY = (anOtherPortal->mGridY - thePortal->mGridY) * 100;
 				aLawnMower->mLastPortalX = anOtherPortal->mGridX;
@@ -3236,10 +3690,9 @@ void Challenge::UpdatePortal(GridItem* thePortal)
 
 GridItem* Challenge::GetOtherPortal(GridItem* thePortal)
 {
-	for (GridItem* aGridItem : mBoard->mGridItems)
+	GridItem* aGridItem = nullptr;
+	while (mBoard->IterateGridItems(aGridItem))
 	{
-		if (aGridItem->mDead)
-			continue;
 		if (aGridItem != thePortal && aGridItem->mGridItemType == thePortal->mGridItemType)
 		{
 			return aGridItem;
@@ -3250,10 +3703,9 @@ GridItem* Challenge::GetOtherPortal(GridItem* thePortal)
 
 GridItem* Challenge::GetPortalAt(int theGridX, int theGridY)
 {
-	for (GridItem* aGridItem : mBoard->mGridItems)
+	GridItem* aGridItem = nullptr;
+	while (mBoard->IterateGridItems(aGridItem))
 	{
-		if (aGridItem->mDead)
-			continue;
 		if (aGridItem->mGridX == theGridX && aGridItem->mGridY == theGridY && aGridItem->IsOpenPortal())
 		{
 			return aGridItem;
@@ -3264,28 +3716,27 @@ GridItem* Challenge::GetPortalAt(int theGridX, int theGridY)
 
 void Challenge::MoveAPortal()
 {
-	PvzpWeightedArray aPickArray[MAX_PORTALS];
+	TodWeightedArray aPickArray[MAX_PORTALS];
 	int aNumpicks = 0;
 
-	for (GridItem* aGridItem : mBoard->mGridItems)
+	GridItem* aGridItem = nullptr;
+	while(mBoard->IterateGridItems(aGridItem))
 	{
-		if (aGridItem->mDead)
-			continue;
 		if (aGridItem->IsOpenPortal())
 		{
-			PVZP_ASSERT(aNumpicks < MAX_PORTALS);
+			TOD_ASSERT(aNumpicks < MAX_PORTALS);
 			aPickArray[aNumpicks].mWeight = 1;
-			aPickArray[aNumpicks].mItem = reinterpret_cast<intptr_t>(aGridItem);
+			aPickArray[aNumpicks].mItem = (int)aGridItem;
 			aNumpicks++;
 		}
 	}
 
-	PVZP_ASSERT(aNumpicks);
-	GridItem* aPortal = reinterpret_cast<GridItem*>(PvzpPickFromWeightedArray(aPickArray, aNumpicks));
+	TOD_ASSERT(aNumpicks);
+	GridItem* aPortal = (GridItem*)TodPickFromWeightedArray(aPickArray, aNumpicks);
 	GridItem* aOtherPortal = GetOtherPortal(aPortal);
-	PVZP_ASSERT(aOtherPortal);
+	TOD_ASSERT(aOtherPortal);
 
-	PvzpWeightedGridArray aGridArray[MAX_PICK_GRID_SIZE];
+	TodWeightedGridArray aGridArray[MAX_PICK_GRID_SIZE];
 	int aGridArrayCount = 0;
 	for (int aGridX = 0; aGridX < 10; aGridX++)
 	{
@@ -3293,7 +3744,7 @@ void Challenge::MoveAPortal()
 		{
 			if (GetPortalAt(aGridX, aGridY) == nullptr && aOtherPortal->mGridX != aGridX && aOtherPortal->mGridY != aGridY)
 			{
-				PVZP_ASSERT(aGridArrayCount < MAX_PICK_GRID_SIZE);
+				TOD_ASSERT(aGridArrayCount < MAX_PICK_GRID_SIZE);
 				aGridArray[aGridArrayCount].mX = aGridX;
 				aGridArray[aGridArrayCount].mY = aGridY;
 				aGridArray[aGridArrayCount].mWeight = 1;
@@ -3302,7 +3753,7 @@ void Challenge::MoveAPortal()
 		}
 	}
 
-	PvzpWeightedGridArray* aGrid = PvzpPickFromWeightedGridArray(aGridArray, aGridArrayCount);
+	TodWeightedGridArray* aGrid = TodPickFromWeightedGridArray(aGridArray, aGridArrayCount);
 	GridItem* aNewPortal = mBoard->mGridItems.DataArrayAlloc();
 	aNewPortal->mGridItemType = aPortal->mGridItemType;
 	aNewPortal->mGridX = aGrid->mX;
@@ -3314,10 +3765,9 @@ void Challenge::MoveAPortal()
 
 void Challenge::UpdatePortalCombat()
 {
-	for (GridItem* aGridItem : mBoard->mGridItems)
+	GridItem* aGridItem = nullptr;
+	while (mBoard->IterateGridItems(aGridItem))
 	{
-		if (aGridItem->mDead)
-			continue;
 		if (aGridItem->IsOpenPortal())
 		{
 			UpdatePortal(aGridItem);
@@ -3349,8 +3799,9 @@ float Challenge::PortalCombatRowSpawnWeight(int theGridY)
 	if (GetPortalDistanceToMower(theGridY) < 5)
 		return 0.01f;
 
-	for (GridItem* aGridItem : mBoard->mGridItems)
-		if (!aGridItem->mDead && aGridItem->IsOpenPortal() && aGridItem->mGridY == theGridY)
+	GridItem* aGridItem = 0;
+	while (mBoard->IterateGridItems(aGridItem))
+		if (aGridItem->IsOpenPortal() && aGridItem->mGridY == theGridY)
 			return 1.0f;
 
 	return 0.2f;
@@ -3359,11 +3810,10 @@ float Challenge::PortalCombatRowSpawnWeight(int theGridY)
 GridItem* Challenge::GetPortalToLeft(int theGridX, int theGridY)
 {
 	GridItem* aGridItemRecord = nullptr;
-
-	for (GridItem* aGridItem : mBoard->mGridItems)
+	
+	GridItem* aGridItem = 0;
+	while (mBoard->IterateGridItems(aGridItem))
 	{
-		if (aGridItem->mDead)
-			continue;
 		if (aGridItem->IsOpenPortal() && aGridItem->mGridX < theGridX && aGridItem->mGridY == theGridY)
 		{
 			if (aGridItemRecord == nullptr || aGridItemRecord->mGridX < aGridItem->mGridX)
@@ -3392,7 +3842,7 @@ int Challenge::GetPortalDistanceToMower(int theGridY)
 		}
 
 		GridItem* aOtherPortal = GetOtherPortal(aPortal);
-		PVZP_ASSERT(aOtherPortal);
+		TOD_ASSERT(aOtherPortal);
 
 		aDistance += aGridX - aPortal->mGridX;
 		aGridX = aOtherPortal->mGridX;
@@ -3406,10 +3856,9 @@ GridItem* Challenge::GetPortalToRight(int theGridX, int theGridY)
 {
 	GridItem* aGridItemRecord = nullptr;
 
-	for (GridItem* aGridItem : mBoard->mGridItems)
+	GridItem* aGridItem = nullptr;
+	while (mBoard->IterateGridItems(aGridItem))
 	{
-		if (aGridItem->mDead)
-			continue;
 		if (aGridItem->IsOpenPortal() && aGridItem->mGridX > theGridX && aGridItem->mGridY == theGridY)
 		{
 			if (!aGridItemRecord || aGridItemRecord->mGridX > aGridItem->mGridX)
@@ -3423,24 +3872,23 @@ GridItem* Challenge::GetPortalToRight(int theGridX, int theGridY)
 }
 
 // BONUS
-GridItem* Challenge::GetPortalLeftRight(int theGridX, int theGridY, int theToLeft)
+GridItem* Challenge::GetPortalLeftRight(int theGridX, int theGridY, bool theToLeft)
 {
 	GridItem* aGridItemRecord = nullptr;
 
-	for (GridItem* aGridItem : mBoard->mGridItems)
+	GridItem* aGridItem = nullptr;
+	while (mBoard->IterateGridItems(aGridItem))
 	{
-		if (aGridItem->mDead)
-			continue;
 		int aPortalX = aGridItem->mGridX;
 		if (aPortalX == theGridX)
 		{
-			continue;  // skip portals in the same column as theGridX
+			continue;  
 		}
 
-		int aIsDir = (aPortalX > theGridX) ^ theToLeft;
+		bool aIsDir = (aPortalX > theGridX) ^ theToLeft;
 		if (aGridItem->IsOpenPortal() && aIsDir && aGridItem->mGridY == theGridY)
 		{
-			int aIsCls = (aGridItemRecord->mGridX > aPortalX) ^ theToLeft;
+			bool aIsCls = (aGridItemRecord->mGridX > aPortalX) ^ theToLeft;
 			if (!aGridItemRecord || aIsCls)
 			{
 				aGridItemRecord = aGridItem;
@@ -3452,7 +3900,7 @@ GridItem* Challenge::GetPortalLeftRight(int theGridX, int theGridY, int theToLef
 }
 // BONUS_END
 
-int Challenge::CanTargetZombieWithPortals(Plant* thePlant, Zombie* theZombie)
+bool Challenge::CanTargetZombieWithPortals(Plant* thePlant, Zombie* theZombie)
 {
 	int aGridX = thePlant->mPlantCol;
 	int aGridY = thePlant->mRow;
@@ -3462,8 +3910,8 @@ int Challenge::CanTargetZombieWithPortals(Plant* thePlant, Zombie* theZombie)
 		GridItem* aPortal = GetPortalToRight(aGridX, aGridY);
 		if (aGridY == theZombie->mRow)
 		{
-			int aRangeLeft = aGridX * 80;
-			int aRangeRight = aPortal ? aPortal->mGridX * 80 : 800;
+			int aRangeLeft = aGridX * 80 + BOARD_ADDITIONAL_WIDTH;
+			int aRangeRight = aPortal ? aPortal->mGridX * 80 + BOARD_ADDITIONAL_WIDTH : 800 + BOARD_ADDITIONAL_WIDTH;
 			if (theZombie->mX > aRangeLeft&& theZombie->mX < aRangeRight)
 				return true;
 		}
@@ -3485,6 +3933,7 @@ int Challenge::CanTargetZombieWithPortals(Plant* thePlant, Zombie* theZombie)
 
 void Challenge::BeghouledPacketClicked(SeedPacket* theSeedPacket)
 {
+	/*
 	SeedType aPacketType = theSeedPacket->mPacketType;
 	int aPacketCost = mBoard->GetCurrentPlantCost(aPacketType, SEED_NONE);
 	if (!mBoard->CanTakeSunMoney(aPacketCost))
@@ -3509,11 +3958,10 @@ void Challenge::BeghouledPacketClicked(SeedPacket* theSeedPacket)
 		mBeghouledPurcasedUpgrade[aUpgrade] = true;
 		const SeedType gUpgradableSeedTypes[3] = { SEED_PEASHOOTER, SEED_PUFFSHROOM, SEED_WALLNUT };
 		SeedType aSeedPrimary = gUpgradableSeedTypes[aUpgrade];
-
-		for (Plant* aPlant : mBoard->mPlants)
+	
+		Plant* aPlant = nullptr;
+		while (mBoard->IteratePlants(aPlant))
 		{
-			if (aPlant->mDead)
-				continue;
 			if (aPlant->mSeedType == aSeedPrimary)
 			{
 				aPlant->Die();
@@ -3522,6 +3970,73 @@ void Challenge::BeghouledPacketClicked(SeedPacket* theSeedPacket)
 		}
 		theSeedPacket->SetActivate(false);
 	}
+	*/
+
+	int aPacketCost = mBoard->GetCurrentPlantCost(theSeedPacket->mPacketType, SEED_NONE);
+	if (!mBoard->CanTakeSunMoney(aPacketCost))
+		return;
+
+	if (theSeedPacket->mPacketType == SEED_REPEATER && !mBoard->mChallenge->mBeghouledPurcasedUpgrade[(int)BeghouledUpgrade::BEGHOULED_UPGRADE_REPEATER])
+	{
+		mBoard->mChallenge->mBeghouledPurcasedUpgrade[(int)BeghouledUpgrade::BEGHOULED_UPGRADE_REPEATER] = true;
+
+		Plant* aPlant = nullptr;
+		while (mBoard->IteratePlants(aPlant))
+		{
+			if (aPlant->mSeedType == SEED_PEASHOOTER)
+			{
+				aPlant->Die();
+				mBoard->AddPlant(aPlant->mPlantCol, aPlant->mRow, SEED_REPEATER, SEED_NONE);
+			}
+		}
+		theSeedPacket->Deactivate();
+	}
+	else if (theSeedPacket->mPacketType == SEED_FUMESHROOM && !mBoard->mChallenge->mBeghouledPurcasedUpgrade[(int)BeghouledUpgrade::BEGHOULED_UPGRADE_FUMESHROOM])
+	{
+		mBoard->mChallenge->mBeghouledPurcasedUpgrade[(int)BeghouledUpgrade::BEGHOULED_UPGRADE_FUMESHROOM] = true;
+
+		Plant* aPlant = nullptr;
+		while (mBoard->IteratePlants(aPlant))
+		{
+			if (aPlant->mSeedType == SEED_PUFFSHROOM)
+			{
+				aPlant->Die();
+				mBoard->AddPlant(aPlant->mPlantCol, aPlant->mRow, SEED_FUMESHROOM, SEED_NONE);
+			}
+		}
+		theSeedPacket->Deactivate();
+	}
+	else if (theSeedPacket->mPacketType == SEED_TALLNUT && !mBoard->mChallenge->mBeghouledPurcasedUpgrade[(int)BeghouledUpgrade::BEGHOULED_UPGRADE_TALLNUT])
+	{
+		mBoard->mChallenge->mBeghouledPurcasedUpgrade[(int)BeghouledUpgrade::BEGHOULED_UPGRADE_TALLNUT] = true;
+
+		Plant* aPlant = nullptr;
+		while (mBoard->IteratePlants(aPlant))
+		{
+			if (aPlant->mSeedType == SEED_WALLNUT)
+			{
+				aPlant->Die();
+				mBoard->AddPlant(aPlant->mPlantCol, aPlant->mRow, SEED_TALLNUT, SEED_NONE);
+			}
+		}
+		theSeedPacket->Deactivate();
+	}
+	else if (theSeedPacket->mPacketType == SEED_BEGHOULED_BUTTON_SHUFFLE)
+	{
+		if (mChallengeState == STATECHALLENGE_BEGHOULED_FALLING || mChallengeState == STATECHALLENGE_BEGHOULED_MOVING)
+			return;
+
+		BeghouledShuffle();
+	}
+	else if (theSeedPacket->mPacketType == SEED_BEGHOULED_BUTTON_CRATER)
+	{
+		if (!BeghouledCanClearCrater() || mChallengeState == STATECHALLENGE_BEGHOULED_FALLING || mChallengeState == STATECHALLENGE_BEGHOULED_MOVING)
+			return;
+
+		BeghouledClearCrater(1);
+		BeghouledStartFalling(STATECHALLENGE_BEGHOULED_FALLING);
+	}
+
 	mBoard->TakeSunMoney(aPacketCost);
 }
 
@@ -3529,17 +4044,16 @@ void Challenge::BeghouledShuffle()
 {
 	mBoard->ClearAdvice(ADVICE_NONE);
 
-	for (Plant* aPlant : mBoard->mPlants)
+	Plant* aPlant = nullptr;
+	while (mBoard->IteratePlants(aPlant))
 	{
-		if (aPlant->mDead)
-			continue;
 		aPlant->Die();
 	}
 
 	BeghouledStartFalling(STATECHALLENGE_BEGHOULED_FALLING);
 }
 
-int Challenge::BeghouledCanClearCrater()
+bool Challenge::BeghouledCanClearCrater()
 {
 	for (int aRow = 0; aRow < 5; aRow++)
 	{
@@ -3558,8 +4072,8 @@ int Challenge::BeghouledCanClearCrater()
 Zombie* Challenge::ZombiquariumSpawnSnorkle()
 {
 	Zombie* aZombie = mBoard->AddZombieInRow(ZOMBIE_SNORKEL, 0, 0);
-	aZombie->mPosX = RandRangeFloat(50, 650);
-	aZombie->mPosY = RandRangeFloat(100, 400);
+	aZombie->mPosX = RandRangeFloat(50, BOARD_WIDTH - 150);
+	aZombie->mPosY = RandRangeFloat(100, BOARD_HEIGHT - 200);
 	return aZombie;
 }
 
@@ -3582,7 +4096,7 @@ void Challenge::ZombiquariumPacketClicked(SeedPacket* theSeedPacket)
 
 			Zombie* aZombie = ZombiquariumSpawnSnorkle();
 			mApp->PlayFoley(FOLEY_ZOMBIESPLASH);
-			mApp->AddPvzpParticle(aZombie->mPosX + 60.0f, aZombie->mPosY + 20.0f, RENDER_LAYER_TOP, PARTICLE_PLANTING_POOL);
+			mApp->AddTodParticle(aZombie->mPosX + 60.0f, aZombie->mPosY + 20.0f, RENDER_LAYER_TOP, PARTICLE_PLANTING_POOL);
 		}
 		else if (theSeedPacket->mPacketType == SEED_ZOMBIQUARIUM_TROPHY)
 		{
@@ -3610,14 +4124,13 @@ void Challenge::ZombiquariumDropBrain(int x, int y)
 
 void Challenge::ZombiquariumMouseDown(int x, int y)
 {
-	if (x < 80 || x > 720 || y < 90 || y > 430)
+	if (x < 80 || x > BOARD_WIDTH - 80 || y < 90 || y > BOARD_HEIGHT - 170)
 		return;
-
+	
 	int aBrainsCount = 0;
-	for (GridItem* aGridItem : mBoard->mGridItems)
+	GridItem* aGridItem = nullptr;
+	while (mBoard->IterateGridItems(aGridItem))
 	{
-		if (aGridItem->mDead)
-			continue;
 		if (aGridItem->mGridItemType == GRIDITEM_BRAIN)
 		{
 			aBrainsCount++;
@@ -3638,12 +4151,12 @@ void Challenge::ZombiquariumUpdate()
 	}
 	if (!mBoard->mAdvice->IsBeingDisplayed() && !mBoard->mHelpDisplayed[ADVICE_ZOMBIQUARIUM_COLLECT_SUN])
 	{
-		std::string aMsg = PvzpReplaceNumberString("[ADVICE_ZOMBIQUARIUM_COLLECT_SUN]", "{SCORE}", ZOMBIQUARIUM_WINNING_SCORE);
+		SexyString aMsg = TodReplaceNumberString(_S("[ADVICE_ZOMBIQUARIUM_COLLECT_SUN]"), _S("{SCORE}"), ZOMBIQUARIUM_WINNING_SCORE);
 		mBoard->DisplayAdvice(aMsg, MESSAGE_STYLE_HINT_TALL_FAST, ADVICE_ZOMBIQUARIUM_COLLECT_SUN);
 	}
 
-	int aScore = std::clamp(mBoard->mSunMoney, 0, ZOMBIQUARIUM_WINNING_SCORE);
-	mBoard->mProgressMeterWidth = PvzpAnimateCurve(0, ZOMBIQUARIUM_WINNING_SCORE, aScore, 0, PROGRESS_METER_COUNTER, CURVE_LINEAR);
+	int aScore = ClampInt(mBoard->mSunMoney, 0, ZOMBIQUARIUM_WINNING_SCORE);
+	mBoard->mProgressMeterWidth = TodAnimateCurve(0, ZOMBIQUARIUM_WINNING_SCORE, aScore, 0, PROGRESS_METER_COUNTER, CURVE_LINEAR);
 	if (aScore >= ZOMBIQUARIUM_WINNING_SCORE - 100)
 	{
 		mBoard->DisplayAdvice("[ADVICE_ALMOST_THERE]", MESSAGE_STYLE_HINT_TALL_FAST, ADVICE_ALMOST_THERE);
@@ -3677,15 +4190,14 @@ void Challenge::ZombiquariumUpdate()
 		mBoard->mTutorialState = TUTORIAL_ZOMBIQUARIUM_BOUGHT_SNORKEL;
 	}
 
-	for (GridItem* aGridItem : mBoard->mGridItems)
+	GridItem* aGridItem = nullptr;
+	while(mBoard->IterateGridItems(aGridItem))
 	{
-		if (aGridItem->mDead)
-			continue;
 		if (aGridItem->mGridItemType == GRIDITEM_BRAIN)
 		{
 			aGridItem->mGridItemCounter++;
 			aGridItem->mPosY += 0.15f;
-			if (aGridItem->mPosY >= 500.0f)
+			if (aGridItem->mPosY >= BOARD_HEIGHT - 100)
 			{
 				aGridItem->GridItemDie();
 			}
@@ -3704,7 +4216,7 @@ void Challenge::ShovelAddWallnuts()
 	}
 }
 
-void Challenge::ScaryPotterDontPlaceInCol(int theCol, PvzpWeightedGridArray* theGridArray, int theGridArrayCount)
+void Challenge::ScaryPotterDontPlaceInCol(int theCol, TodWeightedGridArray* theGridArray, int theGridArrayCount)
 {
 	for (int i = 0; i < theGridArrayCount; i++)
 	{
@@ -3715,7 +4227,7 @@ void Challenge::ScaryPotterDontPlaceInCol(int theCol, PvzpWeightedGridArray* the
 	}
 }
 
-void Challenge::ScaryPotterFillColumnWithPlant(int theCol, SeedType theSeedType, PvzpWeightedGridArray* theGridArray, int theGridArrayCount)
+void Challenge::ScaryPotterFillColumnWithPlant(int theCol, SeedType theSeedType, TodWeightedGridArray* theGridArray, int theGridArrayCount)
 {
 	ScaryPotterDontPlaceInCol(theCol, theGridArray, theGridArrayCount);
 
@@ -3729,12 +4241,12 @@ void Challenge::ScaryPotterFillColumnWithPlant(int theCol, SeedType theSeedType,
 	}
 }
 
-void Challenge::ScaryPotterPlacePot(ScaryPotType theScaryPotType, ZombieType theZombieType, SeedType theSeedType, int theCount, PvzpWeightedGridArray* theGridArray, int theGridArrayCount)
+void Challenge::ScaryPotterPlacePot(ScaryPotType theScaryPotType, ZombieType theZombieType, SeedType theSeedType, int theCount, TodWeightedGridArray* theGridArray, int theGridArrayCount)
 {
 	ScaryPotType aPotType = theScaryPotType;
 	while (theCount > 0)
 	{
-		PvzpWeightedGridArray* aGrid = PvzpPickFromWeightedGridArray(theGridArray, theGridArrayCount);
+		TodWeightedGridArray* aGrid = TodPickFromWeightedGridArray(theGridArray, theGridArrayCount);
 
 		GridItem* aScaryPot = mBoard->mGridItems.DataArrayAlloc();
 		aScaryPot->mGridItemType = GRIDITEM_SCARY_POT;
@@ -3754,29 +4266,31 @@ void Challenge::ScaryPotterPlacePot(ScaryPotType theScaryPotType, ZombieType the
 
 void Challenge::ScaryPotterChangePotType(GridItemState thePotType, int theCount)
 {
-	PvzpWeightedArray aPotArray[MAX_SCARY_POTS];
+	TodWeightedArray aPotArray[MAX_SCARY_POTS];
 	int aPotCount = 0;
 
-	for (GridItem* aGridItem : mBoard->mGridItems)
+	GridItem* aGridItem = nullptr;
+	while (mBoard->IterateGridItems(aGridItem))
 	{
-		if (aGridItem->mDead)
-			continue;
 		if (aGridItem->mGridItemType == GRIDITEM_SCARY_POT)
 		{
 			if ((thePotType == GRIDITEM_STATE_SCARY_POT_LEAF && aGridItem->mScaryPotType == SCARYPOT_SEED) ||
 				(thePotType == GRIDITEM_STATE_SCARY_POT_ZOMBIE && aGridItem->mZombieType == ZOMBIE_GARGANTUAR))
 			{
-				aPotArray[aPotCount].mItem = reinterpret_cast<intptr_t>(aGridItem);
+				aPotArray[aPotCount].mItem = (int)aGridItem;
 				aPotArray[aPotCount].mWeight = 1;
 				aPotCount++;
 			}
 		}
 	}
-	theCount = std::min(theCount, aPotCount);
+	if (theCount > aPotCount)
+	{
+		theCount = aPotCount;
+	}
 
 	for (int i = 0; i < theCount; i++)
 	{
-		PvzpWeightedArray* aScaryPotArray = PvzpPickArrayItemFromWeightedArray(aPotArray, aPotCount);
+		TodWeightedArray* aScaryPotArray = TodPickArrayItemFromWeightedArray(aPotArray, aPotCount);
 		aScaryPotArray->mWeight = 0;
 		((GridItem*)(aScaryPotArray->mItem))->mGridItemState = thePotType;
 	}
@@ -3785,17 +4299,18 @@ void Challenge::ScaryPotterChangePotType(GridItemState thePotType, int theCount)
 void Challenge::ScaryPotterPopulate()
 {
 	int aGridArrayCount = 0;
-	PvzpWeightedGridArray aGridArray[MAX_SCARY_POTS];
+	TodWeightedGridArray aGridArray[MAX_SCARY_POTS];
+	int maxRows = (mApp->mGameMode == GAMEMODE_SCARY_POTTER_12 || mApp->mGameMode == GAMEMODE_SCARY_POTTER_13) ? MAX_GRID_SIZE_Y : MAX_GRID_SIZE_Y - 1;
 	for (int aGridX = 0; aGridX < MAX_GRID_SIZE_X; aGridX++)
 	{
-		for (int aGridY = 0; aGridY < MAX_GRID_SIZE_Y - 1; aGridY++)
+		for (int aGridY = 0; aGridY < maxRows; aGridY++)
 		{
 			aGridArray[aGridArrayCount].mX = aGridX;
 			aGridArray[aGridArrayCount].mY = aGridY;
 			aGridArray[aGridArrayCount].mWeight = 1;
 			aGridArrayCount++;
 
-			PVZP_ASSERT(aGridArrayCount <= MAX_SCARY_POTS);
+			TOD_ASSERT(aGridArrayCount <= MAX_SCARY_POTS);
 		}
 	}
 
@@ -3854,13 +4369,15 @@ void Challenge::ScaryPotterPopulate()
 			ScaryPotterDontPlaceInCol(1, aGridArray, aGridArrayCount);
 			ScaryPotterDontPlaceInCol(2, aGridArray, aGridArrayCount);
 			ScaryPotterDontPlaceInCol(3, aGridArray, aGridArrayCount);
-			ScaryPotterPlacePot(SCARYPOT_SEED, ZOMBIE_INVALID, SEED_PEASHOOTER, 5, aGridArray, aGridArrayCount);
-			ScaryPotterPlacePot(SCARYPOT_SEED, ZOMBIE_INVALID, SEED_SNOWPEA, 5, aGridArray, aGridArrayCount);
-			ScaryPotterPlacePot(SCARYPOT_SEED, ZOMBIE_INVALID, SEED_SQUASH, 5, aGridArray, aGridArrayCount);
-			ScaryPotterPlacePot(SCARYPOT_ZOMBIE, ZOMBIE_NORMAL, SEED_NONE, 6, aGridArray, aGridArrayCount);
-			ScaryPotterPlacePot(SCARYPOT_ZOMBIE, ZOMBIE_PAIL, SEED_NONE, 3, aGridArray, aGridArrayCount);
-			ScaryPotterPlacePot(SCARYPOT_ZOMBIE, ZOMBIE_JACK_IN_THE_BOX, SEED_NONE, 1, aGridArray, aGridArrayCount);
-			ScaryPotterChangePotType(GRIDITEM_STATE_SCARY_POT_LEAF, 2);
+			ScaryPotterPlacePot(ScaryPotType::SCARYPOT_SEED, ZombieType::ZOMBIE_INVALID, SeedType::SEED_PEASHOOTER, 4, aGridArray, aGridArrayCount); 
+			ScaryPotterPlacePot(ScaryPotType::SCARYPOT_SEED, ZombieType::ZOMBIE_INVALID, SeedType::SEED_SNOWPEA, 5, aGridArray, aGridArrayCount);
+			ScaryPotterPlacePot(ScaryPotType::SCARYPOT_SEED, ZombieType::ZOMBIE_INVALID, SeedType::SEED_SQUASH, 5, aGridArray, aGridArrayCount);
+			ScaryPotterPlacePot(ScaryPotType::SCARYPOT_ZOMBIE, ZombieType::ZOMBIE_NORMAL, SeedType::SEED_NONE, 5, aGridArray, aGridArrayCount);
+			ScaryPotterPlacePot(ScaryPotType::SCARYPOT_ZOMBIE, ZombieType::ZOMBIE_PAIL, SeedType::SEED_NONE, 3, aGridArray, aGridArrayCount);
+			ScaryPotterPlacePot(ScaryPotType::SCARYPOT_ZOMBIE, ZombieType::ZOMBIE_JACK_IN_THE_BOX, SeedType::SEED_NONE, 1, aGridArray, aGridArrayCount);
+			ScaryPotterPlacePot(ScaryPotType::SCARYPOT_SUN, ZombieType::ZOMBIE_INVALID, SeedType::SEED_NONE, 1, aGridArray, aGridArrayCount);
+			ScaryPotterPlacePot(ScaryPotType::SCARYPOT_HYPNO, ZombieType::ZOMBIE_GARGANTUAR, SeedType::SEED_NONE, 1, aGridArray, aGridArrayCount);
+			ScaryPotterChangePotType(GridItemState::GRIDITEM_STATE_SCARY_POT_LEAF, 2);
 			break;
 		case GAMEMODE_SCARY_POTTER_2:
 			ScaryPotterDontPlaceInCol(0, aGridArray, aGridArrayCount);
@@ -3917,20 +4434,20 @@ void Challenge::ScaryPotterPopulate()
 			ScaryPotterPlacePot(SCARYPOT_ZOMBIE, ZOMBIE_FOOTBALL, SEED_NONE, 3, aGridArray, aGridArrayCount);
 			ScaryPotterChangePotType(GRIDITEM_STATE_SCARY_POT_LEAF, 2);
 			break;
-		case GAMEMODE_SCARY_POTTER_6:
-			ScaryPotterDontPlaceInCol(0, aGridArray, aGridArrayCount);
-			ScaryPotterDontPlaceInCol(1, aGridArray, aGridArrayCount);
-			ScaryPotterPlacePot(SCARYPOT_SEED, ZOMBIE_INVALID, SEED_LEFTPEATER, 7, aGridArray, aGridArrayCount);
-			ScaryPotterPlacePot(SCARYPOT_SEED, ZOMBIE_INVALID, SEED_SQUASH, 2, aGridArray, aGridArrayCount);
-			ScaryPotterPlacePot(SCARYPOT_SEED, ZOMBIE_INVALID, SEED_TALLNUT, 5, aGridArray, aGridArrayCount);
-			ScaryPotterPlacePot(SCARYPOT_SEED, ZOMBIE_INVALID, SEED_THREEPEATER, 2, aGridArray, aGridArrayCount);
-			ScaryPotterPlacePot(SCARYPOT_SEED, ZOMBIE_INVALID, SEED_TORCHWOOD, 4, aGridArray, aGridArrayCount);
-			ScaryPotterPlacePot(SCARYPOT_ZOMBIE, ZOMBIE_NORMAL, SEED_NONE, 7, aGridArray, aGridArrayCount);
-			ScaryPotterPlacePot(SCARYPOT_ZOMBIE, ZOMBIE_POLEVAULTER, SEED_NONE, 5, aGridArray, aGridArrayCount);
-			ScaryPotterPlacePot(SCARYPOT_ZOMBIE, ZOMBIE_FOOTBALL, SEED_NONE, 2, aGridArray, aGridArrayCount);
-			ScaryPotterPlacePot(SCARYPOT_ZOMBIE, ZOMBIE_JACK_IN_THE_BOX, SEED_NONE, 1, aGridArray, aGridArrayCount);
-			ScaryPotterChangePotType(GRIDITEM_STATE_SCARY_POT_LEAF, 2);
-			break;
+        case GAMEMODE_SCARY_POTTER_6:
+            ScaryPotterDontPlaceInCol(0, aGridArray, aGridArrayCount);
+            ScaryPotterDontPlaceInCol(1, aGridArray, aGridArrayCount);
+            ScaryPotterPlacePot(SCARYPOT_SEED, ZOMBIE_INVALID, SEED_LEFTPEATER, 6, aGridArray, aGridArrayCount);
+            ScaryPotterPlacePot(SCARYPOT_SEED, ZOMBIE_INVALID, SEED_SQUASH, 1, aGridArray, aGridArrayCount);
+            ScaryPotterPlacePot(SCARYPOT_SEED, ZOMBIE_INVALID, SEED_TALLNUT, 4, aGridArray, aGridArrayCount);
+            ScaryPotterPlacePot(SCARYPOT_SEED, ZOMBIE_INVALID, SEED_THREEPEATER, 1, aGridArray, aGridArrayCount);
+            ScaryPotterPlacePot(SCARYPOT_SEED, ZOMBIE_INVALID, SEED_TORCHWOOD, 3, aGridArray, aGridArrayCount);
+            ScaryPotterPlacePot(SCARYPOT_ZOMBIE, ZOMBIE_NORMAL, SEED_NONE, 6, aGridArray, aGridArrayCount);
+            ScaryPotterPlacePot(SCARYPOT_ZOMBIE, ZOMBIE_POLEVAULTER, SEED_NONE, 4, aGridArray, aGridArrayCount);
+            ScaryPotterPlacePot(SCARYPOT_ZOMBIE, ZOMBIE_FOOTBALL, SEED_NONE, 5, aGridArray, aGridArrayCount);
+            ScaryPotterPlacePot(SCARYPOT_ZOMBIE, ZOMBIE_JACK_IN_THE_BOX, SEED_NONE, 5, aGridArray, aGridArrayCount);
+            ScaryPotterChangePotType(GRIDITEM_STATE_SCARY_POT_LEAF, 2);
+            break;
 		case GAMEMODE_SCARY_POTTER_7:
 			ScaryPotterDontPlaceInCol(0, aGridArray, aGridArrayCount);
 			ScaryPotterDontPlaceInCol(1, aGridArray, aGridArrayCount);
@@ -3971,9 +4488,127 @@ void Challenge::ScaryPotterPopulate()
 			ScaryPotterPlacePot(SCARYPOT_ZOMBIE, ZOMBIE_GARGANTUAR, SEED_NONE, 1, aGridArray, aGridArrayCount);
 			ScaryPotterChangePotType(GRIDITEM_STATE_SCARY_POT_LEAF, 2);
 			break;
+		case GAMEMODE_SCARY_POTTER_10:
+			ScaryPotterPlacePot(SCARYPOT_SEED, ZOMBIE_INVALID, SEED_MAGNETSHROOM, 3, aGridArray, aGridArrayCount);
+			ScaryPotterPlacePot(SCARYPOT_SUN, ZOMBIE_INVALID, SEED_NONE, 5, aGridArray, aGridArrayCount);
+			ScaryPotterPlacePot(SCARYPOT_SEED, ZOMBIE_INVALID, SEED_PLANTERN, 3, aGridArray, aGridArrayCount);
+			ScaryPotterPlacePot(SCARYPOT_SEED, ZOMBIE_INVALID, SEED_REPEATER, 6, aGridArray, aGridArrayCount);
+			ScaryPotterPlacePot(SCARYPOT_SEED, ZOMBIE_INVALID, SEED_LEFTPEATER, 7, aGridArray, aGridArrayCount);
+			ScaryPotterPlacePot(SCARYPOT_SEED, ZOMBIE_INVALID, SEED_EXPLODE_O_NUT, 4, aGridArray, aGridArrayCount);
+			ScaryPotterPlacePot(SCARYPOT_SEED, ZOMBIE_INVALID, SEED_SNOWPEA, 2, aGridArray, aGridArrayCount);
+			ScaryPotterPlacePot(SCARYPOT_ZOMBIE, ZOMBIE_NORMAL, SEED_NONE, 6, aGridArray, aGridArrayCount);
+			ScaryPotterPlacePot(SCARYPOT_ZOMBIE, ZOMBIE_TRAFFIC_CONE, SEED_NONE, 4, aGridArray, aGridArrayCount);
+			ScaryPotterPlacePot(SCARYPOT_ZOMBIE, ZOMBIE_PAIL, SEED_NONE, 3, aGridArray, aGridArrayCount);
+			ScaryPotterPlacePot(SCARYPOT_ZOMBIE, ZOMBIE_LADDER, SEED_NONE, 1, aGridArray, aGridArrayCount);
+			ScaryPotterPlacePot(SCARYPOT_ZOMBIE, ZOMBIE_FOOTBALL, SEED_NONE, 1, aGridArray, aGridArrayCount);
+			ScaryPotterChangePotType(GRIDITEM_STATE_SCARY_POT_LEAF, 5);
+			break;
+		case GAMEMODE_SCARY_POTTER_11:
+			ScaryPotterDontPlaceInCol(0, aGridArray, aGridArrayCount);
+			ScaryPotterDontPlaceInCol(1, aGridArray, aGridArrayCount);
+			ScaryPotterDontPlaceInCol(2, aGridArray, aGridArrayCount);
+			ScaryPotterPlacePot(SCARYPOT_SUN, ZOMBIE_INVALID, SEED_NONE, 2, aGridArray, aGridArrayCount);
+			ScaryPotterPlacePot(SCARYPOT_SEED, ZOMBIE_INVALID, SEED_PLANTERN, 2, aGridArray, aGridArrayCount);
+			ScaryPotterPlacePot(SCARYPOT_SEED, ZOMBIE_INVALID, SEED_SNOWPEA, 4, aGridArray, aGridArrayCount);
+			ScaryPotterPlacePot(SCARYPOT_SEED, ZOMBIE_INVALID, SEED_TALLNUT, 3, aGridArray, aGridArrayCount);
+			ScaryPotterPlacePot(SCARYPOT_SEED, ZOMBIE_INVALID, SEED_LEFTPEATER, 4, aGridArray, aGridArrayCount);
+			ScaryPotterPlacePot(SCARYPOT_SEED, ZOMBIE_INVALID, SEED_ICESHROOM, 3, aGridArray, aGridArrayCount);
+			ScaryPotterPlacePot(SCARYPOT_HYPNO, ZOMBIE_SUNDYEDITION, SEED_NONE, 1, aGridArray, aGridArrayCount);
+			ScaryPotterPlacePot(SCARYPOT_GARGANTUAR, ZOMBIE_GARGANTUAR, SEED_NONE, 1, aGridArray, aGridArrayCount);
+			ScaryPotterPlacePot(SCARYPOT_ZOMBIE, ZOMBIE_NORMAL, SEED_NONE, 4, aGridArray, aGridArrayCount);
+			ScaryPotterPlacePot(SCARYPOT_ZOMBIE, ZOMBIE_PAIL, SEED_NONE, 3, aGridArray, aGridArrayCount);
+			ScaryPotterPlacePot(SCARYPOT_ZOMBIE, ZOMBIE_BRICK, SEED_NONE, 2, aGridArray, aGridArrayCount);
+			ScaryPotterPlacePot(SCARYPOT_ZOMBIE, ZOMBIE_CATAPULT, SEED_NONE, 1, aGridArray, aGridArrayCount);
+			ScaryPotterChangePotType(GRIDITEM_STATE_SCARY_POT_LEAF, 6);
+			break;
+		case GAMEMODE_SCARY_POTTER_12:
+		{
+			ScaryPotterDontPlaceInCol(0, aGridArray, aGridArrayCount);
+			ScaryPotterDontPlaceInCol(1, aGridArray, aGridArrayCount);
+			ScaryPotterDontPlaceInCol(2, aGridArray, aGridArrayCount);
+			TodWeightedGridArray aWaterGrids[MAX_SCARY_POTS];
+			TodWeightedGridArray aLandGrids[MAX_SCARY_POTS];
+			int aWaterCount = 0, aLandCount = 0;
+			for (int i = 0; i < aGridArrayCount; i++) {
+				if (aGridArray[i].mWeight > 0) {
+					if (aGridArray[i].mY == 2 || aGridArray[i].mY == 3) aWaterGrids[aWaterCount++] = aGridArray[i];
+					else aLandGrids[aLandCount++] = aGridArray[i];
+				}
+			}
+			ScaryPotterPlacePot(SCARYPOT_POOL, ZOMBIE_INVALID, SEED_LILYPAD, 3, aWaterGrids, aWaterCount);
+			ScaryPotterPlacePot(SCARYPOT_POOL, ZOMBIE_INVALID, SEED_TANGLEKELP, 3, aWaterGrids, aWaterCount);
+			ScaryPotterPlacePot(SCARYPOT_POOL, ZOMBIE_SNORKEL, SEED_NONE, 2, aWaterGrids, aWaterCount);
+			ScaryPotterPlacePot(SCARYPOT_POOL, ZOMBIE_NORMAL, SEED_NONE, 1, aWaterGrids, aWaterCount);
+			ScaryPotterPlacePot(SCARYPOT_POOL, ZOMBIE_TRAFFIC_CONE, SEED_NONE, 1, aWaterGrids, aWaterCount);
+			ScaryPotterPlacePot(SCARYPOT_POOL, ZOMBIE_PAIL, SEED_NONE, 1, aWaterGrids, aWaterCount);
+			ScaryPotterPlacePot(SCARYPOT_POOL, ZOMBIE_BRICK, SEED_NONE, 1, aWaterGrids, aWaterCount);
+			ScaryPotterPlacePot(SCARYPOT_SUN, ZOMBIE_INVALID, SEED_NONE, 3, aLandGrids, aLandCount);
+			ScaryPotterPlacePot(SCARYPOT_SEED, ZOMBIE_INVALID, SEED_TALLNUT, 3, aLandGrids, aLandCount);
+			ScaryPotterPlacePot(SCARYPOT_SEED, ZOMBIE_INVALID, SEED_THREEPEATER, 3, aLandGrids, aLandCount);
+			ScaryPotterPlacePot(SCARYPOT_SEED, ZOMBIE_INVALID, SEED_LEFTPEATER, 4, aLandGrids, aLandCount);
+			ScaryPotterPlacePot(SCARYPOT_SEED, ZOMBIE_INVALID, SEED_SNOWPEA, 3, aLandGrids, aLandCount);
+			ScaryPotterPlacePot(SCARYPOT_ZOMBIE, ZOMBIE_NORMAL, SEED_NONE, 3, aLandGrids, aLandCount);
+			ScaryPotterPlacePot(SCARYPOT_ZOMBIE, ZOMBIE_TRAFFIC_CONE, SEED_NONE, 2, aLandGrids, aLandCount);
+			ScaryPotterPlacePot(SCARYPOT_ZOMBIE, ZOMBIE_PAIL, SEED_NONE, 2, aLandGrids, aLandCount);
+			ScaryPotterPlacePot(SCARYPOT_ZOMBIE, ZOMBIE_LADDER, SEED_NONE, 1, aLandGrids, aLandCount);
+			ScaryPotterChangePotType(GRIDITEM_STATE_SCARY_POT_LEAF, 4);
+			break;
+		}
+		case GAMEMODE_SCARY_POTTER_13:
+		{
+			ScaryPotterDontPlaceInCol(0, aGridArray, aGridArrayCount);
+			ScaryPotterDontPlaceInCol(1, aGridArray, aGridArrayCount);
+			TodWeightedGridArray aWaterGrids[MAX_SCARY_POTS];
+			TodWeightedGridArray aLandGrids[MAX_SCARY_POTS];
+			int aWaterCount = 0, aLandCount = 0;
+			for (int i = 0; i < aGridArrayCount; i++) {
+				if (aGridArray[i].mWeight > 0) {
+					if (aGridArray[i].mY == 2 || aGridArray[i].mY == 3) aWaterGrids[aWaterCount++] = aGridArray[i];
+					else aLandGrids[aLandCount++] = aGridArray[i];
+				}
+			}
+			ScaryPotterPlacePot(SCARYPOT_POOL, ZOMBIE_INVALID, SEED_LILYPAD, 5, aWaterGrids, aWaterCount);
+			ScaryPotterPlacePot(SCARYPOT_POOL, ZOMBIE_INVALID, SEED_TANGLEKELP, 2, aWaterGrids, aWaterCount);
+			ScaryPotterPlacePot(SCARYPOT_POOL, ZOMBIE_SNORKEL, SEED_NONE, 3, aWaterGrids, aWaterCount);
+			ScaryPotterPlacePot(SCARYPOT_POOL, ZOMBIE_NORMAL, SEED_NONE, 2, aWaterGrids, aWaterCount);
+			ScaryPotterPlacePot(SCARYPOT_POOL, ZOMBIE_TRAFFIC_CONE, SEED_NONE, 1, aWaterGrids, aWaterCount);
+			ScaryPotterPlacePot(SCARYPOT_POOL, ZOMBIE_PAIL, SEED_NONE, 1, aWaterGrids, aWaterCount);
+			ScaryPotterPlacePot(SCARYPOT_SUN, ZOMBIE_INVALID, SEED_NONE, 4, aLandGrids, aLandCount);
+			ScaryPotterPlacePot(SCARYPOT_SEED, ZOMBIE_INVALID, SEED_PLANTERN, 2, aLandGrids, aLandCount);
+			ScaryPotterPlacePot(SCARYPOT_SEED, ZOMBIE_INVALID, SEED_FUMESHROOM, 5, aLandGrids, aLandCount);
+			ScaryPotterPlacePot(SCARYPOT_SEED, ZOMBIE_INVALID, SEED_TALLNUT, 4, aLandGrids, aLandCount);
+			ScaryPotterPlacePot(SCARYPOT_SEED, ZOMBIE_INVALID, SEED_MELONPULT, 3, aLandGrids, aLandCount);
+			ScaryPotterPlacePot(SCARYPOT_ZOMBIE, ZOMBIE_NORMAL, SEED_NONE, 3, aLandGrids, aLandCount);
+			ScaryPotterPlacePot(SCARYPOT_ZOMBIE, ZOMBIE_POGO, SEED_NONE, 2, aLandGrids, aLandCount);
+			ScaryPotterPlacePot(SCARYPOT_ZOMBIE, ZOMBIE_BRICK, SEED_NONE, 2, aLandGrids, aLandCount);
+			ScaryPotterPlacePot(SCARYPOT_ZOMBIE, ZOMBIE_NINJA, SEED_NONE, 2, aLandGrids, aLandCount);
+			ScaryPotterPlacePot(SCARYPOT_GARGANTUAR, ZOMBIE_GARGANTUAR, SEED_NONE, 1, aLandGrids, aLandCount);
+			ScaryPotterChangePotType(GRIDITEM_STATE_SCARY_POT_LEAF, 5);
+			break;
+		}
+		case GAMEMODE_SCARY_POTTER_14:
+		{
+			ScaryPotterDontPlaceInCol(0, aGridArray, aGridArrayCount);
+			ScaryPotterDontPlaceInCol(1, aGridArray, aGridArrayCount);
+			ScaryPotterDontPlaceInCol(2, aGridArray, aGridArrayCount);
+			ScaryPotterPlacePot(SCARYPOT_SEED, ZOMBIE_INVALID, SEED_MELONPULT, 3, aGridArray, aGridArrayCount);
+			ScaryPotterPlacePot(SCARYPOT_SEED, ZOMBIE_INVALID, SEED_PEPPERPULT, 4, aGridArray, aGridArrayCount);
+			ScaryPotterPlacePot(SCARYPOT_SEED, ZOMBIE_INVALID, SEED_FLOWERPOT, 4, aGridArray, aGridArrayCount);
+			ScaryPotterPlacePot(SCARYPOT_SEED, ZOMBIE_INVALID, SEED_CUCKUMBER, 3, aGridArray, aGridArrayCount);
+			ScaryPotterPlacePot(SCARYPOT_SEED, ZOMBIE_INVALID, SEED_SQUASH, 3, aGridArray, aGridArrayCount);
+			ScaryPotterPlacePot(SCARYPOT_SEED, ZOMBIE_INVALID, SEED_LEFTPEATER, 3, aGridArray, aGridArrayCount);
+			ScaryPotterPlacePot(SCARYPOT_GARGANTUAR, ZOMBIE_REDEYE_GARGANTUAR, SEED_NONE, 1, aGridArray, aGridArrayCount);
+			ScaryPotterPlacePot(SCARYPOT_ZOMBIE, ZOMBIE_PAIL, SEED_NONE, 2, aGridArray, aGridArrayCount);
+			ScaryPotterPlacePot(SCARYPOT_ZOMBIE, ZOMBIE_BRICK, SEED_NONE, 2, aGridArray, aGridArrayCount);
+			ScaryPotterPlacePot(SCARYPOT_ZOMBIE, ZOMBIE_FOOTBALL, SEED_NONE, 2, aGridArray, aGridArrayCount);
+			ScaryPotterPlacePot(SCARYPOT_ZOMBIE, ZOMBIE_GIGA_FOOTBALL, SEED_NONE, 2, aGridArray, aGridArrayCount);
+			ScaryPotterPlacePot(SCARYPOT_ZOMBIE, ZOMBIE_CATAPULT, SEED_NONE, 1, aGridArray, aGridArrayCount);
+			ScaryPotterChangePotType(GRIDITEM_STATE_SCARY_POT_LEAF, 5);
+			break;
+		}
 		case GAMEMODE_SCARY_POTTER_ENDLESS:
 		{
-			int aNumExtraGargantuars = std::clamp(mSurvivalStage / 10, 0, 8);
+			int aNumExtraGargantuars = ClampInt(mSurvivalStage / 10, 0, 8);
 			ScaryPotterDontPlaceInCol(0, aGridArray, aGridArrayCount);
 			ScaryPotterDontPlaceInCol(1, aGridArray, aGridArrayCount);
 			ScaryPotterPlacePot(SCARYPOT_SEED, ZOMBIE_INVALID, SEED_LEFTPEATER, 6, aGridArray, aGridArrayCount);
@@ -3990,14 +4625,12 @@ void Challenge::ScaryPotterPopulate()
 			ScaryPotterPlacePot(SCARYPOT_ZOMBIE, ZOMBIE_JACK_IN_THE_BOX, SEED_NONE, 1, aGridArray, aGridArrayCount);
 			ScaryPotterPlacePot(SCARYPOT_ZOMBIE, ZOMBIE_GARGANTUAR, SEED_NONE, 1 + aNumExtraGargantuars, aGridArray, aGridArrayCount);
 			ScaryPotterChangePotType(GRIDITEM_STATE_SCARY_POT_LEAF, 2);
-
-			if (mSurvivalStage == 15)
-				ReportAchievement::GiveAchievement(mApp, ChinaShop, true);
-
+			if (mSurvivalStage == 15) 
+				mApp->GetAchievement(AchievementType::ACHIEVEMENT_CHINA_SHOP);
 			break;
 		}
 		default:
-			PVZP_ASSERT(false);
+			TOD_ASSERT();
 			break;
 		}
 	}
@@ -4013,12 +4646,11 @@ void Challenge::ScaryPotterStart()
 	}
 }
 
-int Challenge::ScaryPotterIsCompleted()
+bool Challenge::ScaryPotterIsCompleted()
 {
-	for (GridItem* aGridItem : mBoard->mGridItems)
+	GridItem* aGridItem = nullptr;
+	while (mBoard->IterateGridItems(aGridItem))
 	{
-		if (aGridItem->mDead)
-			continue;
 		if (aGridItem->mGridItemType == GRIDITEM_SCARY_POT)
 		{
 			return false;
@@ -4066,10 +4698,9 @@ void Challenge::ScaryPotterMalletPot(GridItem* theScaryPot)
 int Challenge::ScaryPotterCountPots()
 {
 	int aCount = 0;
-	for (GridItem* aGridItem : mBoard->mGridItems)
+	GridItem* aGridItem = nullptr;
+	while (mBoard->IterateGridItems(aGridItem))
 	{
-		if (aGridItem->mDead)
-			continue;
 		if (aGridItem->mGridItemType == GRIDITEM_SCARY_POT)
 		{
 			aCount++;
@@ -4078,7 +4709,7 @@ int Challenge::ScaryPotterCountPots()
 	return aCount;
 }
 
-int Challenge::PuzzleIsAwardStage()
+bool Challenge::PuzzleIsAwardStage()
 {
 	if (mApp->IsAdventureMode())
 		return false;
@@ -4099,7 +4730,7 @@ void Challenge::PuzzlePhaseComplete(int theGridX, int theGridY)
 		}
 		else if (aHit < 30)
 		{
-			aCoinType = mApp->mZenGarden->CanDropChocolate() ? COIN_AWARD_CHOCOLATE : COIN_AWARD_MONEY_BAG;
+			aCoinType = mApp->mZenGarden->CanDropChocolate() ? COIN_CHOCOLATE : COIN_AWARD_MONEY_BAG;
 		}
 		else
 		{
@@ -4125,13 +4756,36 @@ void Challenge::ScaryPotterOpenPot(GridItem* theScaryPot)
 {
 	int aXPos = mBoard->GridToPixelX(theScaryPot->mGridX, theScaryPot->mGridY);
 	int aYPos = mBoard->GridToPixelY(theScaryPot->mGridX, theScaryPot->mGridY);
+
 	switch (theScaryPot->mScaryPotType)
 	{
 	case SCARYPOT_SEED:
 		mBoard->AddCoin(aXPos + 20, aYPos, COIN_USABLE_SEED_PACKET, COIN_MOTION_FROM_PLANT)->mUsableSeedType = theScaryPot->mSeedType;
 		break;
+	case SCARYPOT_GARGANTUAR:
 	case SCARYPOT_ZOMBIE:
-		mBoard->AddZombieInRow(theScaryPot->mZombieType, theScaryPot->mGridY, 0)->mPosX = aXPos;
+		mBoard->AddZombieInRow(theScaryPot->mZombieType, theScaryPot->mGridY, 0, true)->mPosX = aXPos;
+		break;
+	case SCARYPOT_POOL:
+		if (theScaryPot->mZombieType != ZOMBIE_INVALID)
+		{
+			Zombie* aZombie = mBoard->AddZombieInRow(theScaryPot->mZombieType, theScaryPot->mGridY, 0, true);
+			if (aZombie)
+			{
+				aZombie->mPosX = aXPos;
+				aZombie->mInPool = true; 
+
+				if (aZombie->mZombieType == ZOMBIE_SNORKEL)
+				{
+					aZombie->mZombiePhase = ZombiePhase::PHASE_SNORKEL_WALKING_IN_POOL;
+					aZombie->PlayZombieReanim("anim_swim", ReanimLoopType::REANIM_LOOP_FULL_LAST_FRAME, 0, 12.0f);
+				}
+			}
+		}
+		else if (theScaryPot->mSeedType != SEED_NONE)
+		{
+			mBoard->AddCoin(aXPos + 20, aYPos, COIN_USABLE_SEED_PACKET, COIN_MOTION_FROM_PLANT)->mUsableSeedType = theScaryPot->mSeedType;
+		}
 		break;
 	case SCARYPOT_SUN:
 	{
@@ -4142,8 +4796,20 @@ void Challenge::ScaryPotterOpenPot(GridItem* theScaryPot)
 		}
 		break;
 	}
+	case SCARYPOT_HYPNO:
+	{
+		Zombie* aZombie = mBoard->AddZombieInRow(theScaryPot->mZombieType, theScaryPot->mGridY, 0, true);
+		if (aZombie != nullptr)
+		{
+			aZombie->mPosX = aXPos;          
+			aZombie->mMindControlled = true;  
+			aZombie->mVelX = 0.5f;           
+			aZombie->StartMindControlled();
+		}
+		break;
+	}
 	default:
-		PVZP_ASSERT(false);
+		TOD_ASSERT();
 		break;
 	}
 
@@ -4164,25 +4830,24 @@ void Challenge::ScaryPotterOpenPot(GridItem* theScaryPot)
 			SpawnLevelAward(theScaryPot->mGridX, theScaryPot->mGridY);
 		}
 	}
-
 	mApp->PlaySample(Sexy::SOUND_BONK);
 	mApp->PlayFoley(FOLEY_VASE_BREAKING);
-	ParticleEffect anEffect =
-		theScaryPot->mGridItemState == GRIDITEM_STATE_SCARY_POT_LEAF ? PARTICLE_VASE_SHATTER_LEAF :
-		theScaryPot->mGridItemState == GRIDITEM_STATE_SCARY_POT_ZOMBIE ? PARTICLE_VASE_SHATTER_ZOMBIE :
-		PARTICLE_VASE_SHATTER;
-	mApp->AddPvzpParticle(aXPos + 20, aYPos, RENDER_LAYER_GROUND, anEffect);
+	ParticleEffect anEffect = theScaryPot->mGridItemState == GRIDITEM_STATE_SCARY_POT_LEAF ? PARTICLE_VASE_SHATTER_LEAF : theScaryPot->mGridItemState == GRIDITEM_STATE_SCARY_POT_ZOMBIE ? PARTICLE_VASE_SHATTER_ZOMBIE : PARTICLE_VASE_SHATTER;
+	TodParticleSystem* aParticle = mApp->AddTodParticle(aXPos + 20, aYPos, RENDER_LAYER_TOP, anEffect);
+	if (aParticle)
+	{
+		if (theScaryPot->mScaryPotType == ScaryPotType::SCARYPOT_SUN)aParticle->OverrideColor(nullptr, Color(255, 255, 0, 255));
+		else if (theScaryPot->mScaryPotType == ScaryPotType::SCARYPOT_HYPNO)aParticle->OverrideColor(nullptr, Color(200, 0, 255, 255));
+	}
 }
-
 void Challenge::ScaryPotterJackExplode(int thePosX, int thePosY)
 {
 	int aGridX = mBoard->PixelToGridX(thePosX, thePosY);
 	int aGridY = mBoard->PixelToGridY(thePosX, thePosY);
 
-	for (GridItem* aGridItem : mBoard->mGridItems)
+	GridItem* aGridItem = nullptr;
+	while (mBoard->IterateGridItems(aGridItem))
 	{
-		if (aGridItem->mDead)
-			continue;
 		if (aGridItem->mGridItemType == GRIDITEM_SCARY_POT && GridInRange(aGridItem->mGridX, aGridItem->mGridY, aGridX, aGridY, 1, 1))
 		{
 			ScaryPotterOpenPot(aGridItem);
@@ -4197,10 +4862,9 @@ void Challenge::PuzzleNextStageClear()
 	mBoard->mProgressMeterWidth = 0;
 
 	{
-		for (Zombie* aZombie : mBoard->mZombies)
+		Zombie* aZombie = nullptr;
+		while (mBoard->IterateZombies(aZombie))
 		{
-			if (aZombie->mDead)
-				continue;
 			if (aZombie->IsOnBoard())
 			{
 				aZombie->DieNoLoot();
@@ -4208,10 +4872,9 @@ void Challenge::PuzzleNextStageClear()
 		}
 	}
 	{
-		for (Plant* aPlant : mBoard->mPlants)
+		Plant* aPlant = nullptr;
+		while (mBoard->IteratePlants(aPlant))
 		{
-			if (aPlant->mDead)
-				continue;
 			if (aPlant->IsOnBoard())
 			{
 				aPlant->Die();
@@ -4220,10 +4883,9 @@ void Challenge::PuzzleNextStageClear()
 	}
 	mBoard->RefreshSeedPacketFromCursor();
 	{
-		for (Coin* aCoin : mBoard->mCoins)
+		Coin* aCoin = nullptr;
+		while (mBoard->IterateCoins(aCoin))
 		{
-			if (aCoin->mDead)
-				continue;
 			if (aCoin->mType == COIN_USABLE_SEED_PACKET)
 			{
 				aCoin->Die();
@@ -4235,10 +4897,9 @@ void Challenge::PuzzleNextStageClear()
 		}
 	}
 	{
-		for (GridItem* aGridItem : mBoard->mGridItems)
+		GridItem* aGridItem = nullptr;
+		while (mBoard->IterateGridItems(aGridItem))
 		{
-			if (aGridItem->mDead)
-				continue;
 			aGridItem->GridItemDie();
 		}
 	}
@@ -4246,7 +4907,7 @@ void Challenge::PuzzleNextStageClear()
 	mSurvivalStage++;
 	mBoard->ClearAdviceImmediately();
 	mBoard->mLevelAwardSpawned = false;
-	mApp->AddPvzpParticle(BOARD_WIDTH / 2, BOARD_HEIGHT / 2, RENDER_LAYER_TOP, PARTICLE_SCREEN_FLASH);
+	mApp->AddTodParticle(BOARD_WIDTH / 2, BOARD_HEIGHT / 2, RENDER_LAYER_TOP, PARTICLE_SCREEN_FLASH);
 }
 
 ZombieType Challenge::IZombieSeedTypeToZombieType(SeedType theSeedType)
@@ -4268,15 +4929,13 @@ ZombieType Challenge::IZombieSeedTypeToZombieType(SeedType theSeedType)
 	case SEED_ZOMBIE_DANCER:		return ZOMBIE_DANCER;
 	case SEED_ZOMBIE_GARGANTUAR:	return ZOMBIE_GARGANTUAR;
 	case SEED_ZOMBIE_IMP:			return ZOMBIE_IMP;
-	default:						PVZP_ASSERT(false);
+	default:						TOD_ASSERT();
 	}
-
-	unreachable();
 }
 
 void Challenge::IZombiePlaceZombie(ZombieType theZombieType, int theGridX, int theGridY)
 {
-	Zombie* aZombie = mBoard->AddZombieInRow(theZombieType, theGridY, 0);
+	Zombie* aZombie = mBoard->AddZombieInRow(theZombieType, theGridY, 0, true);
 	if (theZombieType == ZOMBIE_BUNGEE)
 	{
 		aZombie->mTargetCol = theGridX;
@@ -4309,7 +4968,7 @@ void Challenge::IZombieMouseDownWithZombie(int theX, int theY, int theClickCount
 					ZombieType aZombieType = IZombieSeedTypeToZombieType(aSeedType);
 					IZombiePlaceZombie(aZombieType, aGridX, aGridY);
 
-					PVZP_ASSERT(mBoard->mCursorObject->mSeedBankIndex >= 0 && mBoard->mCursorObject->mSeedBankIndex < mBoard->mSeedBank->mNumPackets);
+					TOD_ASSERT(mBoard->mCursorObject->mSeedBankIndex >= 0 && mBoard->mCursorObject->mSeedBankIndex < mBoard->mSeedBank->mNumPackets);
 					mBoard->mSeedBank->mSeedPackets[mBoard->mCursorObject->mSeedBankIndex].WasPlanted();
 					mApp->PlayFoley(FOLEY_PLANT);
 					mBoard->ClearCursor();
@@ -4366,7 +5025,6 @@ void Challenge::IZombiePlacePlantInSquare(SeedType theSeedType, int theGridX, in
 
 void Challenge::IZombiePlacePlants(SeedType theSeedType, int theCount, int theGridY)
 {
-	// Columns available for plants (the red line limit)
 	int aColumns = 6;
 	GameMode aGameMode = mApp->mGameMode;
 	if (aGameMode >= GAMEMODE_PUZZLE_I_ZOMBIE_1 && aGameMode <= GAMEMODE_PUZZLE_I_ZOMBIE_5)
@@ -4378,30 +5036,26 @@ void Challenge::IZombiePlacePlants(SeedType theSeedType, int theCount, int theGr
 		aColumns = 5;
 	}
 
-	// Only spawn between rows aMinGridY and aMaxGridY
 	int aMinGridY, aMaxGridY;
-	if (theGridY == -1)  // theGridY == -1 means no row restriction
+	if (theGridY == -1)  
 	{
-		aMinGridY = 0;
-		aMaxGridY = 4;
+		aMinGridY = 0;  
+		aMaxGridY = 4;  
 	}
 	else
 	{
 		aMinGridY = theGridY;
-		aMaxGridY = theGridY;  // restrict planting to row theGridY only
+		aMaxGridY = theGridY;  
 	}
 
 	int aGridArrayCount = 0;
-	PvzpWeightedGridArray aGridArray[MAX_GRID_SIZE_X * MAX_GRID_SIZE_Y];
-	// Collect candidate squares from rows aMinGridY to aMaxGridY
+	TodWeightedGridArray aGridArray[MAX_GRID_SIZE_X * MAX_GRID_SIZE_Y];
 	for (int aRow = aMinGridY; aRow <= aMaxGridY; aRow++)
 	{
-		// In each row, collect the columns left of the red line
 		for (int aCol = 0; aCol < aColumns; aCol++)
 		{
 			if (mBoard->CanPlantAt(aCol, aRow, theSeedType) == PLANTING_OK)
 			{
-				// Wall-nuts and torchwoods only appear in the rightmost 3 columns
 				if ((theSeedType != SEED_WALLNUT && theSeedType != SEED_TORCHWOOD) || aColumns - aCol <= 3)
 				{
 					aGridArray[aGridArrayCount].mX = aCol;
@@ -4413,11 +5067,12 @@ void Challenge::IZombiePlacePlants(SeedType theSeedType, int theCount, int theGr
 		}
 	}
 
-	theCount = std::min(theCount, aGridArrayCount);
+	if (theCount > aGridArrayCount)
+		theCount = aGridArrayCount;
 
 	for (int i = 0; i < theCount; i++)
 	{
-		PvzpWeightedGridArray* aGrid = PvzpPickFromWeightedGridArray(aGridArray, aGridArrayCount);
+		TodWeightedGridArray* aGrid = TodPickFromWeightedGridArray(aGridArray, aGridArrayCount);
 		IZombiePlacePlantInSquare(theSeedType, aGrid->mX, aGrid->mY);
 		aGrid->mWeight = 0;
 	}
@@ -4551,11 +5206,11 @@ void Challenge::IZombieInitLevel()
 	case GAMEMODE_PUZZLE_I_ZOMBIE_ENDLESS:
 	{
 		if (mSurvivalStage == 10)
-			ReportAchievement::GiveAchievement(mApp, BetterOffDead, true);
+			mApp->GetAchievement(AchievementType::ACHIEVEMENT_BETTER_OFF_DEAD);
 
 		int aFormationHit = RandRangeInt(0, 4);
 
-		int aPuffshroomCount = RandRangeInt(std::clamp(2 + mSurvivalStage / 3, 2, 4), std::clamp(3 + mSurvivalStage / 2, 2, 6));
+		int aPuffshroomCount = RandRangeInt(ClampInt(2 + mSurvivalStage / 3, 2, 4), ClampInt(3 + mSurvivalStage / 2, 2, 6));
 		if (mSurvivalStage == 0)
 		{
 			aPuffshroomCount = 0;
@@ -4566,7 +5221,7 @@ void Challenge::IZombieInitLevel()
 		}
 		else if (mSurvivalStage >= 10)
 		{
-			aPuffshroomCount = RandRangeInt(std::clamp(2 + mSurvivalStage / 3, 2, 5), std::clamp(3 + mSurvivalStage / 2, 2, 7));
+			aPuffshroomCount = RandRangeInt(ClampInt(2 + mSurvivalStage / 3, 2, 5), ClampInt(3 + mSurvivalStage / 2, 2, 7));
 		}
 		int aSunflowerCount = 8 - aPuffshroomCount;
 		IZombiePlacePlants(SEED_SUNFLOWER, aSunflowerCount, -1);
@@ -4576,24 +5231,24 @@ void Challenge::IZombieInitLevel()
 		{
 			switch (RandRangeInt(0, 4))
 			{
-			case 0:  // Damage formation
+			case 0:  
 				IZombiePlacePlants(SEED_SNOWPEA, 9, -1);
 				IZombiePlacePlants(SEED_SPLITPEA, 4, -1);
 				IZombiePlacePlants(SEED_REPEATER, 4, -1);
 				break;
-			case 1:  // Explosive formation
+			case 1:  
 				IZombiePlacePlants(SEED_POTATOMINE, 9, -1);
 				IZombiePlacePlants(SEED_CHOMPER, 8, -1);
 				break;
-			case 2:  // Tilted formation
+			case 2:  
 				IZombiePlacePlants(SEED_SPIKEWEED, 9, -1);
 				IZombiePlacePlants(SEED_STARFRUIT, 8, -1);
 				break;
-			case 3:  // Piercing formation
+			case 3:  
 				IZombiePlacePlants(SEED_FUMESHROOM, 9, -1);
 				IZombiePlacePlants(SEED_MAGNETSHROOM, 8, -1);
 				break;
-			default:  // Recovery formation
+			default:  
 				IZombiePlacePlants(SEED_SCAREDYSHROOM, 12, -1);
 				IZombiePlacePlants(SEED_SUNFLOWER, 5, -1);
 			}
@@ -4604,7 +5259,7 @@ void Challenge::IZombieInitLevel()
 			{
 			case 0:
 			case 1:
-			case 2:  // Mixed formation
+			case 2:  
 				IZombiePlacePlants(SEED_WALLNUT, 1, -1);
 				IZombiePlacePlants(SEED_TORCHWOOD, 1, -1);
 				IZombiePlacePlants(SEED_POTATOMINE, 1, -1);
@@ -4622,7 +5277,7 @@ void Challenge::IZombieInitLevel()
 				IZombiePlacePlants(SEED_SPIKEWEED, 2, -1);
 				break;
 			case 3:
-			case 4:  // Control formation
+			case 4:  
 				IZombiePlacePlants(SEED_TORCHWOOD, 1, -1);
 				IZombiePlacePlants(SEED_SPLITPEA, 3, -1);
 				IZombiePlacePlants(SEED_REPEATER, 1, -1);
@@ -4633,7 +5288,7 @@ void Challenge::IZombieInitLevel()
 				IZombiePlacePlants(SEED_MAGNETSHROOM, 1, -1);
 				IZombiePlacePlants(SEED_SPIKEWEED, 3, -1);
 				break;
-			default:  // Instant-kill formation
+			default:  
 				IZombiePlacePlants(SEED_POTATOMINE, 4, -1);
 				IZombiePlacePlants(SEED_CHOMPER, 3, -1);
 				IZombiePlacePlants(SEED_SQUASH, 3, -1);
@@ -4645,7 +5300,7 @@ void Challenge::IZombieInitLevel()
 		break;
 	}
 	default:
-		PVZP_ASSERT(false);
+		TOD_ASSERT();
 	}
 
 	mBoard->mBonusLawnMowersRemaining = 0;
@@ -4660,55 +5315,39 @@ void Challenge::IZombieUpdate()
 {
 	int aSunMoney = mBoard->mSunMoney + mBoard->CountSunBeingCollected();
 
-	for (Zombie* aZombie : mBoard->mZombies)
+	Zombie* aZombie = nullptr;
+	while (mBoard->IterateZombies(aZombie))
 	{
-		if (aZombie->mDead)
-			continue;
 		if (!aZombie->IsDeadOrDying() && aZombie->mZombiePhase != PHASE_POLEVAULTER_IN_VAULT && !aZombie->mIsEating && aZombie->mJustGotShotCounter < -500)
 		{
 			aZombie->PickRandomSpeed();
 		}
 	}
-
-	int anActive = false;
-	for (Plant* aPlant : mBoard->mPlants)
+	
+	bool anActive = false;
+	Plant* aPlant = nullptr;
+	while (mBoard->IteratePlants(aPlant))
 	{
-		if (aPlant->mDead)
-			continue;
 		PlantState aState = aPlant->mState;
 		if (aState == STATE_SQUASH_FALLING || aState == STATE_SQUASH_DONE_FALLING || aState == STATE_CHOMPER_BITING || aState == STATE_CHOMPER_BITING_GOT_ONE)
 		{
 			anActive = true;
 		}
 	}
-	for (PvzpParticleSystem* aParticle : mBoard->mApp->mEffectSystem->mParticleHolder->mParticleSystems)
+	TodParticleSystem* aParticle = nullptr;
+	while (mBoard->IterateParticles(aParticle))
 	{
-		if (aParticle->mDead)
-			continue;
 		if (aParticle->mEffectType == PARTICLE_POTATO_MINE)
 		{
 			anActive = true;
 		}
 	}
 
-	bool aHasAvailableSun = false;
-	for (Coin* aCoinForSun : mBoard->mCoins)
+	if (mBoard->mZombies.mSize == 0 && aSunMoney < 50 && !mBoard->HasLevelAwardDropped() && !anActive)
 	{
-		if (aCoinForSun->mDead)
-			continue;
-		if (aCoinForSun->IsSun() && !aCoinForSun->mIsBeingCollected)
+		Coin* aCoin = nullptr;
+		while (mBoard->IterateCoins(aCoin))
 		{
-			aHasAvailableSun = true;
-			break;
-		}
-	}
-
-	if (mBoard->mZombies.mSize == 0 && aSunMoney < 50 && !mBoard->HasLevelAwardDropped() && !anActive && !aHasAvailableSun)
-	{
-		for (Coin* aCoin : mBoard->mCoins)
-		{
-			if (aCoin->mDead)
-				continue;
 			if (aCoin->IsMoney())
 			{
 				aCoin->Die();
@@ -4719,9 +5358,9 @@ void Challenge::IZombieUpdate()
 	}
 }
 
-int Challenge::IsZombieSeedType(SeedType theSeedType)
+bool Challenge::IsZombieSeedType(SeedType theSeedType)
 {
-	return
+	return 
 		theSeedType == SEED_ZOMBIQUARIUM_SNORKLE ||
 		theSeedType == SEED_ZOMBIQUARIUM_TROPHY ||
 		theSeedType == SEED_ZOMBIE_NORMAL ||
@@ -4804,7 +5443,7 @@ GridItem* Challenge::IZombieGetBrainTarget(Zombie* theZombie)
 		aZombieRect.mX += 25;
 	}
 
-	if (aZombieRect.mX > 20)
+	if (aZombieRect.mX > 20 + BOARD_ADDITIONAL_WIDTH)
 		return nullptr;
 
 	GridItem* aBrain = mBoard->GetGridItemAt(GRIDITEM_IZOMBIE_BRAIN, 0, theZombie->mRow);
@@ -4814,7 +5453,7 @@ GridItem* Challenge::IZombieGetBrainTarget(Zombie* theZombie)
 void Challenge::IZombieScoreBrain(GridItem* theBrain)
 {
 	mBoard->mChallenge->mChallengeScore++;
-	mBoard->mProgressMeterWidth = PvzpAnimateCurve(0, I_ZOMBIE_WINNING_SCORE, mBoard->mChallenge->mChallengeScore, 0, PROGRESS_METER_COUNTER, CURVE_LINEAR);
+	mBoard->mProgressMeterWidth = TodAnimateCurve(0, I_ZOMBIE_WINNING_SCORE, mBoard->mChallenge->mChallengeScore, 0, PROGRESS_METER_COUNTER, CURVE_LINEAR);
 
 	if (mBoard->mChallenge->mChallengeScore == I_ZOMBIE_WINNING_SCORE)
 	{
@@ -4834,7 +5473,7 @@ void Challenge::IZombieScoreBrain(GridItem* theBrain)
 	}
 }
 
-int Challenge::IZombieEatBrain(Zombie* theZombie)
+bool Challenge::IZombieEatBrain(Zombie* theZombie)
 {
 	GridItem* aBrain = IZombieGetBrainTarget(theZombie);
 	if (aBrain == nullptr)
@@ -4875,7 +5514,9 @@ void Challenge::IZombieSquishBrain(GridItem* theBrain)
 int Challenge::SquirrelCountUncaught()
 {
 	int aCount = 0;
-	for (GridItem* aGridItem : mBoard->mGridItems)
+
+	GridItem* aGridItem = nullptr;
+	while (mBoard->IterateGridItems(aGridItem))
 	{
 		if (aGridItem->mGridItemType == GRIDITEM_SQUIRREL &&
 			aGridItem->mGridItemState != GRIDITEM_STATE_SQUIRREL_CAUGHT &&
@@ -4890,20 +5531,22 @@ int Challenge::SquirrelCountUncaught()
 
 void Challenge::SquirrelStart()
 {
-	PvzpWeightedGridArray aPicks[MAX_GRID_SIZE_X * (MAX_GRID_SIZE_Y - 1)];
 	int aPicksCount = 0;
+	TodWeightedGridArray aPicks[MAX_GRID_SIZE_X * (MAX_GRID_SIZE_Y - 1)];
 	for (int aCol = 0; aCol < MAX_GRID_SIZE_X; aCol++)
 	{
 		for (int aRow = 0; aRow < MAX_GRID_SIZE_Y - 1; aRow++)
 		{
-			aPicks[aPicksCount] = { aCol, aRow, 1 };
+			aPicks[aPicksCount].mX = aCol;
+			aPicks[aPicksCount].mY = aRow;
+			aPicks[aPicksCount].mWeight = 1;
 			aPicksCount++;
 		}
 	}
-
+	
 	for (int aCount = MAX_SQUIRRELS; aCount > 0; aCount--)
 	{
-		PvzpWeightedGridArray* aGrid = PvzpPickFromWeightedGridArray(aPicks, aPicksCount);
+		TodWeightedGridArray* aGrid = TodPickFromWeightedGridArray(aPicks, 45);
 		aGrid->mWeight = 0;
 
 		GridItem* aSquirrel = mBoard->mGridItems.DataArrayAlloc();
@@ -4911,8 +5554,8 @@ void Challenge::SquirrelStart()
 		aSquirrel->mGridItemState = GRIDITEM_STATE_SQUIRREL_WAITING;
 		aSquirrel->mGridX = aGrid->mX;
 		aSquirrel->mGridY = aGrid->mY;
-		aSquirrel->mGridItemCounter = RandRangeInt(100, 500);
-		aSquirrel->mRenderOrder = Board::MakeRenderOrder(RENDER_LAYER_GRAVE_STONE, aSquirrel->mGridY, 1);
+		aSquirrel->mGridItemCounter = RandRangeInt(100, 400);
+		aSquirrel->mRenderOrder = mBoard->MakeRenderOrder(RENDER_LAYER_GRAVE_STONE, aSquirrel->mGridY, 1);
 	}
 
 	for (int i = 0; i < aPicksCount; i++)
@@ -4923,25 +5566,25 @@ void Challenge::SquirrelStart()
 		}
 	}
 
-	PvzpWeightedGridArray* aZombieGrid = PvzpPickFromWeightedGridArray(aPicks, aPicksCount);
-	GridItem* aZombieSquirrel = mBoard->mGridItems.DataArrayAlloc();
-	aZombieSquirrel->mGridItemType = GRIDITEM_SQUIRREL;
-	aZombieSquirrel->mGridItemState = GRIDITEM_STATE_SQUIRREL_ZOMBIE;
-	aZombieSquirrel->mGridX = aZombieGrid->mX;
-	aZombieSquirrel->mGridY = aZombieGrid->mY;
-	aZombieSquirrel->mRenderOrder = Board::MakeRenderOrder(RENDER_LAYER_GRAVE_STONE, aZombieGrid->mY, 1);
+	TodWeightedGridArray* aGrid = TodPickFromWeightedGridArray(aPicks, 45);
+	GridItem* aSquirrel = mBoard->mGridItems.DataArrayAlloc();
+	aSquirrel->mGridItemType = GRIDITEM_SQUIRREL;
+	aSquirrel->mGridItemState = GRIDITEM_STATE_SQUIRREL_ZOMBIE;
+	aSquirrel->mGridX = aGrid->mX;
+	aSquirrel->mGridY = aGrid->mY;
+	aSquirrel->mRenderOrder = Board::MakeRenderOrder(RENDER_LAYER_GRAVE_STONE, aGrid->mY, 1);
 }
 
 void Challenge::SquirrelChew(GridItem* theSquirrel)
 {
-	theSquirrel->mGridItemCounter = RandRangeInt(100, 500);
+	theSquirrel->mGridItemCounter = RandRangeInt(100, 400);
 
 	Plant* aPlant = mBoard->GetTopPlantAt(theSquirrel->mGridX, theSquirrel->mGridY, TOPPLANT_EATING_ORDER);
 	if (aPlant)
 	{
 		float aPosX = mBoard->GridToPixelX(theSquirrel->mGridX, theSquirrel->mGridY);
 		float aPosY = mBoard->GridToPixelY(theSquirrel->mGridX, theSquirrel->mGridY);
-		mApp->AddPvzpParticle(aPosX + 40, aPosY + 40, aPlant->mRenderOrder + 1, PARTICLE_WALLNUT_EAT_SMALL);
+		mApp->AddTodParticle(aPosX + 40, aPosY + 40, aPlant->mRenderOrder + 1, PARTICLE_WALLNUT_EAT_SMALL);
 
 		if (aPlant->mEatenFlashCountdown <= 25)
 			aPlant->mEatenFlashCountdown = 25;
@@ -4965,37 +5608,38 @@ void Challenge::SquirrelFound(GridItem* theSquirrel)
 	}
 	else
 	{
-		constexpr int aNeighborOffsets[4][2] = { { -1, 0 }, { 1, 0 }, { 0, -1 }, { 0, 1 } };
-		PvzpWeightedGridArray aPicks[4];
+		TodWeightedGridArray aPicks[4];
 		int aPickCount = 0;
-		for (const auto& aOffset : aNeighborOffsets)
+		for (int i = 0; i < 4; i++)
 		{
-			int aGridX = theSquirrel->mGridX + aOffset[0];
-			int aGridY = theSquirrel->mGridY + aOffset[1];
-			if (!mBoard->GetGridItemAt(GRIDITEM_SQUIRREL, aGridX, aGridY) &&
-				mBoard->GetTopPlantAt(aGridX, aGridY, TOPPLANT_EATING_ORDER))
+			int aGridX = theSquirrel->mGridX;
+			int aGridY = theSquirrel->mGridY;
+			switch (i)
 			{
-				aPicks[aPickCount] = { aGridX, aGridY, 1 };
+			case 0: aGridX--; break;
+			case 1: aGridX++; break;
+			case 2: aGridY--; break;
+			case 3: aGridY++; break;
+			}
+
+			if (!mBoard->GetGridItemAt(GRIDITEM_SQUIRREL, aGridX, aGridY) && mBoard->GetTopPlantAt(aGridX, aGridY, TOPPLANT_EATING_ORDER))
+			{
+				aPicks[aPickCount].mX = aGridX;
+				aPicks[aPickCount].mY = aGridY;
+				aPicks[aPickCount].mWeight = 1;
 				aPickCount++;
 			}
 		}
-
+		
 		if (aPickCount > 0)
 		{
-			PvzpWeightedGridArray* aGrid = PvzpPickFromWeightedGridArray(aPicks, aPickCount);
+			TodWeightedGridArray* aGrid = TodPickFromWeightedGridArray(aPicks, aPickCount);
 
-			if (aGrid->mX != theSquirrel->mGridX)
-			{
-				theSquirrel->mGridItemState =
-					aGrid->mX < theSquirrel->mGridX ? GRIDITEM_STATE_SQUIRREL_RUNNING_LEFT : GRIDITEM_STATE_SQUIRREL_RUNNING_RIGHT;
-			}
-			else
-			{
-				theSquirrel->mGridItemState =
-					aGrid->mY < theSquirrel->mGridY ? GRIDITEM_STATE_SQUIRREL_RUNNING_UP : GRIDITEM_STATE_SQUIRREL_RUNNING_DOWN;
-			}
+			theSquirrel->mGridItemState =
+				aGrid->mX < theSquirrel->mGridX ? GRIDITEM_STATE_SQUIRREL_RUNNING_LEFT :
+				aGrid->mX >= theSquirrel->mGridX ? GRIDITEM_STATE_SQUIRREL_RUNNING_RIGHT :
+				aGrid->mY < theSquirrel->mGridY ? GRIDITEM_STATE_SQUIRREL_RUNNING_UP : GRIDITEM_STATE_SQUIRREL_RUNNING_DOWN;
 
-			theSquirrel->mGridItemCounter = 50;
 			theSquirrel->mGridX = aGrid->mX;
 			theSquirrel->mGridY = aGrid->mY;
 			theSquirrel->mRenderOrder = Board::MakeRenderOrder(RENDER_LAYER_GRAVE_STONE, aGrid->mY, 1);
@@ -5006,9 +5650,10 @@ void Challenge::SquirrelFound(GridItem* theSquirrel)
 			theSquirrel->mGridItemCounter = 100;
 
 			int aSquirrelsRemaining = SquirrelCountUncaught();
-			if (aSquirrelsRemaining > 0)
+			if (aSquirrelsRemaining)
 			{
-				mBoard->DisplayAdvice(mApp->Pluralize(aSquirrelsRemaining, "[ADVICE_SQUIRRELS_ONE_LEFT]", "[ADVICE_SQUIRRELS_LEFT]"), MESSAGE_STYLE_HINT_FAST, ADVICE_NONE);
+				SexyString aMessage = mApp->Pluralize(aSquirrelsRemaining, _S("[ADVICE_SQUIRRELS_ONE_LEFT]"), _S("[ADVICE_SQUIRRELS_LEFT]"));
+				mBoard->DisplayAdvice(aMessage, MESSAGE_STYLE_HINT_FAST, ADVICE_NONE);
 			}
 			else
 			{
@@ -5023,14 +5668,11 @@ void Challenge::SquirrelUpdateOne(GridItem* theSquirrel)
 {
 	int& aCounter = theSquirrel->mGridItemCounter;
 	if (aCounter > 0)
-	{
 		aCounter--;
-	}
 
 	GridItemState& aState = theSquirrel->mGridItemState;
 	if (aState == GRIDITEM_STATE_SQUIRREL_WAITING || aState == GRIDITEM_STATE_SQUIRREL_ZOMBIE)
 	{
-		// a squirrel is uncovered once the plant sharing its cell is removed
 		if (!mBoard->GetTopPlantAt(theSquirrel->mGridX, theSquirrel->mGridY, TOPPLANT_EATING_ORDER))
 		{
 			SquirrelFound(theSquirrel);
@@ -5051,7 +5693,7 @@ void Challenge::SquirrelUpdateOne(GridItem* theSquirrel)
 	if (aState >= GRIDITEM_STATE_SQUIRREL_PEEKING && aState <= GRIDITEM_STATE_SQUIRREL_RUNNING_RIGHT && aCounter == 0)
 	{
 		aState = GRIDITEM_STATE_SQUIRREL_WAITING;
-		aCounter = RandRangeInt(100, 500);
+		aCounter = RandRangeInt(100, 400);
 	}
 	if (aState == GRIDITEM_STATE_SQUIRREL_CAUGHT && aCounter == 0)
 	{
@@ -5061,7 +5703,8 @@ void Challenge::SquirrelUpdateOne(GridItem* theSquirrel)
 
 void Challenge::SquirrelUpdate()
 {
-	for (GridItem* aGridItem : mBoard->mGridItems)
+	GridItem* aGridItem=0x0;
+	while (mBoard->IterateGridItems(aGridItem))
 	{
 		if (aGridItem->mGridItemType == GRIDITEM_SQUIRREL)
 		{
@@ -5070,7 +5713,7 @@ void Challenge::SquirrelUpdate()
 	}
 
 	mChallengeScore = MAX_SQUIRRELS - SquirrelCountUncaught();
-	mBoard->mProgressMeterWidth = PvzpAnimateCurve(0, MAX_SQUIRRELS, mChallengeScore, 0, PROGRESS_METER_COUNTER, CURVE_LINEAR);
+	mBoard->mProgressMeterWidth = TodAnimateCurve(0, MAX_SQUIRRELS, mChallengeScore, 0, PROGRESS_METER_COUNTER, CURVE_LINEAR);
 }
 
 void Challenge::UpdateRain()
@@ -5078,30 +5721,28 @@ void Challenge::UpdateRain()
 	mRainCounter--;
 	if (mRainCounter < 0 && !mBoard->mCutScene->IsBeforePreloading())
 	{
-		float aPosX = RandRangeFloat(40.0f, 740.0f);
-		float aPosY = RandRangeFloat(90.0f, 240.0f);
+		float aPosX = RandRangeFloat(40.0f, 740.0f) + BOARD_ADDITIONAL_WIDTH;
+		float aPosY = RandRangeFloat(90.0f, 240.0f) + BOARD_OFFSET_Y;
 		Reanimation* aSplashReanim = mApp->AddReanimation(aPosX, aPosY, RENDER_LAYER_GROUND, REANIM_RAIN_SPLASH);
 		aSplashReanim->mColorOverride = Color(255, 255, 255, RandRangeInt(100, 200));
 		float aScale = RandRangeFloat(0.7f, 1.2f);
 		aSplashReanim->OverrideScale(aScale, aScale);
 
-		aPosX = RandRangeFloat(40.0f, 740.0f);
-		aPosY = RandRangeFloat(290.0f, 410.0f);
+		aPosX = RandRangeFloat(40.0f, 740.0f) + BOARD_ADDITIONAL_WIDTH;
+		aPosY = RandRangeFloat(290.0f, 410.0f) + BOARD_OFFSET_Y;
 		Reanimation* aCircleReanim = mApp->AddReanimation(aPosX, aPosY, RENDER_LAYER_GROUND, REANIM_RAIN_CIRCLE);
-		(void)aCircleReanim; // unused
 		aSplashReanim->mColorOverride = Color(255, 255, 255, RandRangeInt(50, 150));
 		aScale = RandRangeFloat(0.7f, 1.1f);
 		aSplashReanim->OverrideScale(aScale, aScale);
 
-		aPosX = RandRangeFloat(40.0f, 740.0f);
-		aPosY = RandRangeFloat(450.0f, 580.0f);
+		aPosX = RandRangeFloat(40.0f, 740.0f) + BOARD_ADDITIONAL_WIDTH;
+		aPosY = RandRangeFloat(450.0f, 580.0f) + BOARD_OFFSET_Y;
 		Reanimation* aRainReanim = mApp->AddReanimation(aPosX, aPosY, RENDER_LAYER_GROUND, REANIM_RAIN_SPLASH);
-		(void)aRainReanim; // unused
 		aSplashReanim->mColorOverride = Color(255, 255, 255, RandRangeInt(100, 200));
 		aScale = RandRangeFloat(0.7f, 1.2f);
 		aSplashReanim->OverrideScale(aScale, aScale);
-
-		mRainCounter = RandRangeInt(10, 20);
+		
+        mRainCounter = RandRangeInt(10, 20);
 	}
 }
 
@@ -5115,13 +5756,13 @@ void Challenge::LastStandUpdate()
 
 		if (mSurvivalStage == 0)
 		{
-			aButton->SetLabel("[START_ONSLAUGHT]");
-			aButton->Resize(300, 559, 210, 46);
+			aButton->mLabel = _S("[START_ONSLAUGHT]");
+			aButton->Resize(300 + BOARD_ADDITIONAL_WIDTH, BOARD_HEIGHT - 41, 210, 46);
 		}
 		else
 		{
-			aButton->SetLabel("[CONTINUE_ONSLAUGHT]");
-			aButton->Resize(270, 559, 257, 46);
+			aButton->mLabel = _S("[CONTINUE_ONSLAUGHT]");
+			aButton->Resize(270 + BOARD_ADDITIONAL_WIDTH, BOARD_HEIGHT - 41, 257, 46);
 		}
 	}
 
@@ -5134,20 +5775,19 @@ void Challenge::LastStandCompletedStage()
 	mApp->PlaySample(Sexy::SOUND_HUGE_WAVE);
 	mChallengeState = STATECHALLENGE_NORMAL;
 	mBoard->mSeedBank->RefreshAllPackets();
-
-	for (Plant* aPlant : mBoard->mPlants)
+	
+	Plant* aPlant = nullptr;
+	while (mBoard->IteratePlants(aPlant))
 	{
-		if (aPlant->mDead)
-			continue;
-		if (aPlant->mState == STATE_CHOMPER_DIGESTING || aPlant->mState == STATE_COBCANNON_ARMING ||
+		if (aPlant->mState == STATE_CHOMPER_DIGESTING || aPlant->mState == STATE_COBCANNON_ARMING || 
 			aPlant->mState == STATE_MAGNETSHROOM_SUCKING || aPlant->mState == STATE_MAGNETSHROOM_CHARGING)
 		{
-			aPlant->mStateCountdown = std::min(aPlant->mStateCountdown, 200);
+			aPlant->mStateCountdown = min(aPlant->mStateCountdown, 200);
 		}
 	}
 
-	std::string aFlagStr = mApp->Pluralize(mBoard->GetSurvivalFlagsCompleted(), "[ONE_FLAG]", "[COUNT_FLAGS]");
-	std::string aMsg = PvzpReplaceString("[SUCCESSFULLY_DEFENDED]", "{FLAGS}", aFlagStr);
+	SexyString aFlagStr = mApp->Pluralize(mBoard->GetSurvivalFlagsCompleted(), _S("[ONE_FLAG]"), _S("[COUNT_FLAGS]"));
+	SexyString aMsg = TodReplaceString(_S("[SUCCESSFULLY_DEFENDED]"), _S("{FLAGS}"), aFlagStr);
 	mBoard->DisplayAdvice(aMsg, MESSAGE_STYLE_BIG_MIDDLE_FAST, ADVICE_NONE);
 
 	mSurvivalStage++;
@@ -5173,7 +5813,7 @@ void Challenge::WhackAZombieUpdate()
 	}
 }
 
-int Challenge::TreeOfWisdomMouseOn(int theX, int theY)
+bool Challenge::TreeOfWisdomMouseOn(int theX, int theY)
 {
 	HitResult aHitResult;
 	mBoard->MouseHitTest(theX, theY, &aHitResult);
@@ -5187,14 +5827,18 @@ int Challenge::TreeOfWisdomGetSize()
 
 void Challenge::TreeOfWisdomDraw(Graphics* g)
 {
-	int aMouseOn = TreeOfWisdomMouseOn(mApp->mWidgetManager->mLastMouseX - mBoard->mX, mApp->mWidgetManager->mLastMouseY - mBoard->mY);
+	bool aMouseOn = TreeOfWisdomMouseOn(mApp->mWidgetManager->mLastMouseX, mApp->mWidgetManager->mLastMouseY);
 
 	Reanimation* aReanimTree = mApp->ReanimationGet(mReanimChallenge);
 	aReanimTree->mEnableExtraOverlayDraw = false;
-	aReanimTree->DrawRenderGroup(g, 0);  // draw the background
+	aReanimTree->OverrideScale(1.25f, 1.25f);
+	aReanimTree->SetPosition(BOARD_ADDITIONAL_WIDTH / 2, 0);
+	aReanimTree->DrawRenderGroup(g, 1);
 	for (int i = 0; i < 6; i++)
 	{
-		mApp->ReanimationGet(mReanimClouds[i])->DrawRenderGroup(g, 0);
+		Reanimation* aReanimCloud = mApp->ReanimationGet(mReanimClouds[i]);
+		aReanimCloud->SetPosition(BOARD_ADDITIONAL_WIDTH / 2, 0);
+		aReanimCloud->DrawRenderGroup(g, 0);
 	}
 
 	int aHeight = TreeOfWisdomGetSize();
@@ -5207,10 +5851,10 @@ void Challenge::TreeOfWisdomDraw(Graphics* g)
 	{
 		aReanimTree->mEnableExtraOverlayDraw = false;
 	}
-	aReanimTree->DrawRenderGroup(g, 2);  // draw the trunk
+	aReanimTree->DrawRenderGroup(g, 2);  
 
 	aReanimTree->mEnableExtraOverlayDraw = false;
-	aReanimTree->DrawRenderGroup(g, 3);  // draw the ground
+	aReanimTree->DrawRenderGroup(g, 3);  
 
 	if (aMouseOn)
 	{
@@ -5221,7 +5865,7 @@ void Challenge::TreeOfWisdomDraw(Graphics* g)
 	{
 		aReanimTree->mEnableExtraOverlayDraw = false;
 	}
-	aReanimTree->DrawRenderGroup(g, 4);  // draw the roots
+	aReanimTree->DrawRenderGroup(g, 4);  
 
 	if (mChallengeState == STATECHALLENGE_TREE_GIVE_WISDOM || mChallengeState == STATECHALLENGE_TREE_BABBLING)
 	{
@@ -5239,13 +5883,13 @@ void Challenge::TreeOfWisdomDraw(Graphics* g)
 		else
 		{
 			aPosX = 390;
-			aPosY = 52;
+			aPosY = 40;
 		}
-
+		aPosX += BOARD_ADDITIONAL_WIDTH;  
+		aPosY += BOARD_OFFSET_Y;
 		g->DrawImage(Sexy::IMAGE_STORE_SPEECHBUBBLE2, aPosX, aPosY);
-		std::string aText = StrFormat("[TREE_OF_WISDOM_%d]", mTreeOfWisdomTalkIndex);
-		auto aWrapEnum = static_cast<DrawStringJustification>(mApp->GetInteger("TREE_OF_WISDOM_TEXT_WRAP_ENUM", DS_ALIGN_CENTER_VERTICAL_MIDDLE));
-		PvzpDrawStringWrapped(g, aText, Rect(aPosX + 25, aPosY + 6, 233, 144), Sexy::FONT_BRIANNETOD16, Color::Black, aWrapEnum);
+		SexyString aText = StrFormat(_S("[TREE_OF_WISDOM_%d]"), mTreeOfWisdomTalkIndex);
+		TodDrawStringWrapped(g, aText, Rect(aPosX + 25, aPosY + 6, 233, 144), Sexy::FONT_BRIANNETOD16, Color::Black, DS_ALIGN_CENTER_VERTICAL_MIDDLE);
 	}
 
 	int aCurSize = aHeight;
@@ -5256,26 +5900,27 @@ void Challenge::TreeOfWisdomDraw(Graphics* g)
 		{
 			aCurSize--;
 		}
-		aScale = PvzpAnimateCurveFloat(55, 20, mChallengeStateCounter, 1.0f, 1.2f, CURVE_BOUNCE);
+		aScale = TodAnimateCurveFloat(55, 20, mChallengeStateCounter, 1.0f, 1.2f, CURVE_BOUNCE);
 	}
 	if (aCurSize >= 50)
 	{
-		std::string aSizeStr = PvzpReplaceNumberString("[TREE_OF_WISDOM_HIEGHT]", "{HEIGHT}", aCurSize);
+		SexyString aSizeStr = TodReplaceNumberString(_S("[TREE_OF_WISDOM_HIEGHT]"), _S("{HEIGHT}"), aCurSize);
 		float aStrWidth = Sexy::FONT_HOUSEOFTERROR16->StringWidth(aSizeStr) * aScale;
 		float aStrHeight = Sexy::FONT_HOUSEOFTERROR16->mAscent * aScale;
 
 		SexyTransform2D aMatrix;
-		PvzpScaleTransformMatrix(aMatrix, 400.0f - aStrWidth * 0.5f, 20.0f + aStrHeight * 0.5f, aScale, aScale);
-		PvzpDrawStringMatrix(g, Sexy::FONT_HOUSEOFTERROR16, aMatrix, aSizeStr, Color(255, 255, 255));
+		TodScaleTransformMatrix(aMatrix, 400.0f - aStrWidth * 0.5f + BOARD_ADDITIONAL_WIDTH - 15, 20.0f + aStrHeight * 0.5f, aScale, aScale);
+		TodDrawStringMatrix(g, Sexy::FONT_HOUSEOFTERROR16, aMatrix, aSizeStr, Color(255, 255, 255));
 	}
 }
 
 void Challenge::TreeOfWisdomInit()
 {
+	mBoard->mShowShovel = false;
 	ReanimatorEnsureDefinitionLoaded(REANIM_TREEOFWISDOM, true);
 	Reanimation* aReanimTree = mApp->AddReanimation(0.5f, 0.5f, 0, REANIM_TREEOFWISDOM);
 	aReanimTree->mIsAttachment = true;
-	aReanimTree->AssignRenderGroupToPrefix("bg", 0);
+	aReanimTree->AssignRenderGroupToPrefix("bg", 1);
 	aReanimTree->AssignRenderGroupToPrefix("tree", 2);
 	aReanimTree->AssignRenderGroupToPrefix("grass", 3);
 	aReanimTree->AssignRenderGroupToPrefix("overlay", 4);
@@ -5284,9 +5929,9 @@ void Challenge::TreeOfWisdomInit()
 	aReanimTree->SetTruncateDisappearingFrames(nullptr, false);
 	mReanimChallenge = mApp->ReanimationGetID(aReanimTree);
 
-	int aTreeSize = std::clamp(TreeOfWisdomGetSize(), 1, 50);
+	int aTreeSize = ClampInt(TreeOfWisdomGetSize(), 1, 50);
 	aReanimTree->PlayReanim(StrFormat("anim_grow%d", aTreeSize).c_str(), REANIM_PLAY_ONCE_AND_HOLD, 0, 18.0f);
-	if (aTreeSize == 0 && mApp->mPlayerInfo->mPurchases[STORE_ITEM_TREE_FOOD] < PURCHASE_COUNT_OFFSET)
+	if (aTreeSize == 1 && mApp->mPlayerInfo->mPurchases[STORE_ITEM_TREE_FOOD] < PURCHASE_COUNT_OFFSET)
 	{
 		aReanimTree->mFrameCount += aReanimTree->mFrameStart;
 		aReanimTree->mFrameStart = 0;
@@ -5324,7 +5969,7 @@ void Challenge::TreeOfWisdomGrow()
 {
 	mApp->mPlayerInfo->mChallengeRecords[mApp->GetCurrentChallengeIndex()]++;
 	int aTreeSize = TreeOfWisdomGetSize();
-	mApp->ReanimationGet(mReanimChallenge)->PlayReanim(StrFormat("anim_grow%d", std::clamp(aTreeSize, 1, 51)).c_str(), REANIM_PLAY_ONCE_AND_HOLD, 0, 8.0f);
+	mApp->ReanimationGet(mReanimChallenge)->PlayReanim(StrFormat("anim_grow%d", ClampInt(aTreeSize, 1, 51)).c_str(), REANIM_PLAY_ONCE_AND_HOLD, 0, 8.0f);
 	mApp->PlayFoley(FOLEY_PLANTGROW);
 
 	if (aTreeSize > 1)
@@ -5338,19 +5983,19 @@ void Challenge::TreeOfWisdomGrow()
 	}
 
 	if (aTreeSize == 100)
-		ReportAchievement::GiveAchievement(mApp, ToweringWisdom, true);
+		mApp->GetAchievement(ACHIEVEMENT_TOWERING_WISDOM);
 }
 
 void Challenge::TreeOfWisdomFertilize()
 {
 	GridItem* aTreeFood = mBoard->mGridItems.DataArrayAlloc();
-	aTreeFood->mPosX = 340.0f;
-	aTreeFood->mPosY = 300.0f;
+	aTreeFood->mPosX = 340.0f + BOARD_ADDITIONAL_WIDTH;
+	aTreeFood->mPosY = 300.0f + BOARD_OFFSET_Y;
 	aTreeFood->mGridItemType = GRIDITEM_ZEN_TOOL;
 	aTreeFood->mGridX = 0;
 	aTreeFood->mGridY = 0;
 	aTreeFood->mRenderOrder = Board::MakeRenderOrder(RENDER_LAYER_ABOVE_UI, 0, 0);
-	Reanimation* aReanim = mApp->AddReanimation(340.0f, 300.0f, 0, REANIM_TREEOFWISDOM_TREEFOOD);
+	Reanimation* aReanim = mApp->AddReanimation(aTreeFood->mPosX, aTreeFood->mPosY, 0, REANIM_TREEOFWISDOM_TREEFOOD);
 	aReanim->mLoopType = REANIM_PLAY_ONCE_AND_HOLD;
 	aTreeFood->mGridItemReanimID = mApp->ReanimationGetID(aReanim);
 	aTreeFood->mGridItemState = GRIDITEM_STATE_ZEN_TOOL_FERTILIZER;
@@ -5410,7 +6055,7 @@ void Challenge::TreeOfWisdomGiveWisdom()
 	}
 	else
 	{
-		mTreeOfWisdomTalkIndex = std::clamp(aTreeSize - 1, 1, 49);
+		mTreeOfWisdomTalkIndex = ClampInt(aTreeSize - 1, 1, 49);
 	}
 }
 
@@ -5431,7 +6076,7 @@ void Challenge::TreeOfWisdomSayRepeat()
 	}
 	else
 	{
-		mTreeOfWisdomTalkIndex = RandRangeInt(2, std::clamp(aTreeSize, 3, 49));
+		mTreeOfWisdomTalkIndex = RandRangeInt(2, ClampInt(aTreeSize, 3, 49));
 	}
 
 	mChallengeStateCounter = 600;
@@ -5440,6 +6085,7 @@ void Challenge::TreeOfWisdomSayRepeat()
 void Challenge::TreeOfWisdomToolUpdate(GridItem* theZenTool)
 {
 	Reanimation* aReanim = mApp->ReanimationTryToGet(theZenTool->mGridItemReanimID);
+
 	if (aReanim && aReanim->mLoopCount > 0)
 	{
 		TreeOfWisdomGrow();
@@ -5449,10 +6095,9 @@ void Challenge::TreeOfWisdomToolUpdate(GridItem* theZenTool)
 
 void Challenge::TreeOfWisdomUpdate()
 {
-	for (GridItem* aGridItem : mBoard->mGridItems)
+	GridItem* aGridItem = nullptr;
+	while (mBoard->IterateGridItems(aGridItem))
 	{
-		if (aGridItem->mDead)
-			continue;
 		TreeOfWisdomToolUpdate(aGridItem);
 	}
 
@@ -5484,7 +6129,7 @@ void Challenge::TreeOfWisdomUpdate()
 		}
 	}
 
-	for (int i = 5; i >= 0; i--) // Off by one error!
+	for (int i = 5; i >= 0; i--)
 	{
 		Reanimation* aReanimCloud = mApp->ReanimationGet(mReanimClouds[i]);
 		if (mCloudsCounter[i] > 0)
@@ -5508,10 +6153,9 @@ void Challenge::TreeOfWisdomUpdate()
 
 void Challenge::TreeOfWisdomLeave()
 {
-	for (GridItem* aGridItem : mBoard->mGridItems)
+	GridItem* aGridItem = nullptr;
+	while (mBoard->IterateGridItems(aGridItem))
 	{
-		if (aGridItem->mDead)
-			continue;
 		if (aGridItem->mGridItemType == GRIDITEM_ZEN_TOOL)
 		{
 			TreeOfWisdomGrow();
@@ -5531,7 +6175,7 @@ void Challenge::TreeOfWisdomOpenStore()
 {
 	TreeOfWisdomLeave();
 	StoreScreen* aStore = mApp->ShowStoreScreen();
-	aStore->mBackButton->SetLabel("[STORE_BACK_TO_GAME]");
+	aStore->mBackButton->mLabel = _S("[STORE_BACK_TO_GAME]");
 	aStore->mPage = STORE_PAGE_ZEN2;
 	aStore->WaitForResult(true);
 	mApp->mMusic->MakeSureMusicIsPlaying(MUSIC_TUNE_ZEN_GARDEN);
@@ -5547,14 +6191,15 @@ void Challenge::TreeOfWisdomTool(int theMouseX, int theMouseY)
 	mBoard->ClearCursor();
 }
 
-int Challenge::TreeOfWisdomHitTest(int theX, int theY, HitResult* theHitResult)
+bool Challenge::TreeOfWisdomHitTest(int theX, int theY, HitResult* theHitResult)
 {
 	Rect aTreeRect;
 	int aTreeSize = TreeOfWisdomGetSize();
-	if (aTreeSize <= 1)			aTreeRect = Rect(310, 275, 175, 175);
-	else if (aTreeSize < 7)		aTreeRect = Rect(290, 255, 205, 195);
-	else if (aTreeSize < 12)	aTreeRect = Rect(290, 215, 205, 225);
-	else						aTreeRect = Rect(280, 155, 225, 305);
+	int aOffsetY = BOARD_OFFSET_Y * 2;
+	if (aTreeSize <= 1)			aTreeRect = Rect(310 + BOARD_ADDITIONAL_WIDTH, 275 - aOffsetY, 175, 175 + aOffsetY);
+	else if (aTreeSize < 7)		aTreeRect = Rect(290 + BOARD_ADDITIONAL_WIDTH, 255 - aOffsetY, 205, 195 + aOffsetY);
+	else if (aTreeSize < 12)	aTreeRect = Rect(290 + BOARD_ADDITIONAL_WIDTH, 215 - aOffsetY, 205, 225 + aOffsetY);
+	else						aTreeRect = Rect(280 + BOARD_ADDITIONAL_WIDTH, 155 - aOffsetY, 225, 305 + aOffsetY);
 
 	if (aTreeRect.Contains(theX, theY))
 	{
@@ -5570,15 +6215,14 @@ int Challenge::TreeOfWisdomHitTest(int theX, int theY, HitResult* theHitResult)
 	}
 }
 
-int Challenge::TreeOfWisdomCanFeed()
+bool Challenge::TreeOfWisdomCanFeed()
 {
 	if (mChallengeState == STATECHALLENGE_TREE_JUST_GREW)
 		return false;
-
-	for (GridItem* aGridItem : mBoard->mGridItems)
+	
+	GridItem* aGridItem = nullptr;
+	while (mBoard->IterateGridItems(aGridItem))
 	{
-		if (aGridItem->mDead)
-			continue;
 		if (aGridItem->mGridItemType == GRIDITEM_ZEN_TOOL)
 		{
 			return false;

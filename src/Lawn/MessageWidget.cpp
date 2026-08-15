@@ -1,58 +1,31 @@
-/*
- * Copyright (C) 2026 Zhou Qiankang <wszqkzqk@qq.com>
- *
- * SPDX-License-Identifier: LGPL-3.0-or-later
- *
- * This file is part of PvZ-Portable.
- *
- * PvZ-Portable is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * PvZ-Portable is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with PvZ-Portable. If not, see <https://www.gnu.org/licenses/>.
- */
-
 #include "Board.h"
 #include "Challenge.h"
 #include "../LawnApp.h"
 #include "../Resources.h"
 #include "MessageWidget.h"
-#include "graphics/Font.h"
-#include "../PvzpLib/PvzpCommon.h"
-#include "../PvzpLib/Reanimator.h"
-#include "../PvzpLib/PvzpStringFile.h"
-#include <algorithm>
+#include "../SexyAppFramework/Font.h"
+#include "../Sexy.TodLib/TodCommon.h"
+#include "../Sexy.TodLib/Reanimator.h"
+#include "../Sexy.TodLib/TodStringFile.h"
 
 MessageWidget::MessageWidget(LawnApp* theApp)
 {
 	mApp = theApp;
 	mDuration = 0;
-	mDisplayTime = 0;
-	mLabel[0] = '\0';
+	mLabel[0] = _S('\0');
 	mMessageStyle = MessageStyle::MESSAGE_STYLE_OFF;
-	mLabelNext[0] = '\0';
+	mLabelNext[0] = _S('\0');
 	mMessageStyleNext = MessageStyle::MESSAGE_STYLE_OFF;
 	mSlideOffTime = 100;
-	mReanimType = ReanimationType::REANIM_NONE;
-	mTextReanimCount = 0;
-	for (int i = 0; i < MAX_MESSAGE_LENGTH; i++)
-	{
-		mTextReanimID[i] = ReanimationID::REANIMATIONID_NULL;
-		mTextReanimByteOffset[i] = 0;
-	}
+	memset(mTextReanimID, (int)ReanimationID::REANIMATIONID_NULL, MAX_MESSAGE_LENGTH);
 }
 
 void MessageWidget::ClearReanim()
 {
 	for (int i = 0; i < MAX_MESSAGE_LENGTH; i++)
 	{
+		if (mTextReanimID[i] == ReanimationID::REANIMATIONID_NULL)
+			continue;
 		Reanimation* aReanim = mApp->ReanimationTryToGet(mTextReanimID[i]);
 		if (aReanim)
 		{
@@ -66,7 +39,7 @@ void MessageWidget::ClearLabel()
 {
 	if (mReanimType != ReanimationType::REANIM_NONE)
 	{
-		mDuration = std::min(mDuration, 100 + mSlideOffTime + 1);
+		mDuration = min(mDuration, 100 + mSlideOffTime + 1);
 	}
 	else
 	{
@@ -74,36 +47,10 @@ void MessageWidget::ClearLabel()
 	}
 }
 
-// Enforce the label limits (buffer size, line count) in this single place;
-// the rest of the class relies on them.
-static void TruncateLabel(std::string& theLabel)
+void MessageWidget::SetLabel(const SexyString& theNewLabel, MessageStyle theMessageStyle)
 {
-	size_t aBytePos = 0;
-	int aLineCount = 1;
-	while (aBytePos < theLabel.size())
-	{
-		size_t aNext = aBytePos;
-		char32_t aChar;
-		if (!UTF8DecodeNext(theLabel, aNext, aChar))
-		{
-			theLabel.resize(aBytePos); // drop everything from the invalid byte on
-			return;
-		}
-		if (aNext > MAX_MESSAGE_LENGTH - 1 || (aChar == U'\n' && aLineCount == MAX_REANIM_LINES))
-		{
-			theLabel.resize(aBytePos);
-			return;
-		}
-		if (aChar == U'\n')
-			aLineCount++;
-		aBytePos = aNext;
-	}
-}
-
-void MessageWidget::SetLabel(std::string_view theNewLabel, MessageStyle theMessageStyle)
-{
-	std::string aLabel = PvzpStringTranslate(theNewLabel);
-	TruncateLabel(aLabel);
+	SexyString aLabel = TodStringTranslate(theNewLabel);
+	TOD_ASSERT(aLabel.length() < MAX_MESSAGE_LENGTH - 1);
 
 	if (mReanimType != ReanimationType::REANIM_NONE && mDuration > 0)
 	{
@@ -159,12 +106,8 @@ void MessageWidget::SetLabel(std::string_view theNewLabel, MessageStyle theMessa
 			mDuration = 750;
 			break;
 
-		case MessageStyle::MESSAGE_STYLE_ACHIEVEMENT:
-			mDuration = 250;
-			break;
-
 		default:
-			PVZP_ASSERT(false);
+			TOD_ASSERT();
 			break;
 		}
 
@@ -180,24 +123,24 @@ void MessageWidget::LayoutReanimText()
 {
 	float aMaxWidth = 0;
 	int aCurLine = 0, aCurPos = 0;
-	_Font* aFont = GetFont();
+	Font* aFont = GetFont();
 	int aLabelLen = strlen(mLabel);
 	mSlideOffTime = aLabelLen + 100;
 
 	float aLineWidth[MAX_REANIM_LINES];
 	for (int aPos = 0; aPos <= aLabelLen; aPos++)
 	{
-		if (aPos == aLabelLen || mLabel[aPos] == '\n')
+		if (aPos == aLabelLen || mLabel[aPos] == _S('\n'))
 		{
-			PVZP_ASSERT(aCurLine < MAX_REANIM_LINES);
+			TOD_ASSERT(aCurLine < MAX_REANIM_LINES);
 
 			int aLen = aPos - aCurPos;
 			int aOff = aCurPos;
 			aCurPos = aPos + 1;
-			std::string aLine(&mLabel[aOff], aLen);
+			SexyString aLine(&mLabel[aOff], aLen);
 
 			aLineWidth[aCurLine] = aFont->StringWidth(aLine);
-			aMaxWidth = std::max(aMaxWidth, aLineWidth[aCurLine]);
+			aMaxWidth = max(aMaxWidth, aLineWidth[aCurLine]);
 			aCurLine++;
 		}
 	}
@@ -205,33 +148,22 @@ void MessageWidget::LayoutReanimText()
 	aCurLine = 0;
 	float aCurPosY = 0.0f;
 	float aCurPosX = -aLineWidth[0] * 0.5f;
-	// Iterate by code point so each reanimated glyph corresponds to one UTF-8 character.
-	int aCharIdx = 0;
-	size_t aBytePos = 0;
-	while (aBytePos < (size_t)aLabelLen)
+	for (int aPos = 0; aPos < aLabelLen; aPos++)
 	{
-		const size_t aCharStart = aBytePos;
-		char32_t aChar = 0;
-		if (!UTF8DecodeNext(mLabel, aBytePos, aChar))
-			break;
-
 		Reanimation* aReanimText = mApp->AddReanimation(aCurPosX, aCurPosY, 0, mReanimType);
 		aReanimText->mIsAttachment = true;
 		aReanimText->PlayReanim("anim_enter", ReanimLoopType::REANIM_PLAY_ONCE_AND_HOLD, 0.0f, 0.0f);
-		mTextReanimID[aCharIdx] = mApp->ReanimationGetID(aReanimText);
-		mTextReanimByteOffset[aCharIdx] = aCharStart;
+		mTextReanimID[aPos] = mApp->ReanimationGetID(aReanimText);
 
-		aCurPosX += aFont->CharWidth(aChar);
-		if (aChar == U'\n')
+		aCurPosX += aFont->CharWidth(mLabel[aPos]);  
+		if (mLabel[aPos] == _S('\n'))  
 		{
 			aCurLine++;
-			PVZP_ASSERT(aCurLine < MAX_REANIM_LINES);
+			TOD_ASSERT(aCurLine < MAX_REANIM_LINES);
 			aCurPosX = -aLineWidth[aCurLine] * 0.5f;
 			aCurPosY += aFont->GetLineSpacing();
 		}
-		aCharIdx++;
 	}
-	mTextReanimCount = aCharIdx;
 }
 
 void MessageWidget::Update()
@@ -239,7 +171,6 @@ void MessageWidget::Update()
 	if (!mApp->mBoard || mApp->mBoard->mPaused)
 		return;
 
-	// count down the remaining time and switch to the next message
 	if (mDuration < 10000 && mDuration > 0)
 	{
 		mDuration--;
@@ -254,13 +185,13 @@ void MessageWidget::Update()
 		}
 	}
 
-	// Iterate reanimated glyphs by code-point index.
-	for (int aCharIdx = 0; aCharIdx < mTextReanimCount; aCharIdx++)
+	int aLabelLen = strlen(mLabel);
+	for (int aPos = 0; aPos < aLabelLen; aPos++)
 	{
-		Reanimation* aTextReanim = mApp->ReanimationTryToGet(mTextReanimID[aCharIdx]);
+		Reanimation* aTextReanim = mApp->ReanimationTryToGet(mTextReanimID[aPos]);
 		if (aTextReanim == nullptr)
 		{
-			break;
+			break;  
 		}
 
 		int aTextSpeed = mReanimType == ReanimationType::REANIM_TEXT_FADE_ON ? 100 : 1;
@@ -272,7 +203,7 @@ void MessageWidget::Update()
 			}
 			else
 			{
-				aTextReanim->mAnimRate = PvzpAnimateCurveFloat(0, 50, (mDisplayTime - mDuration) * aTextSpeed - aCharIdx, 0.0f, 40.0f, PvzpCurves::CURVE_LINEAR);
+				aTextReanim->mAnimRate = TodAnimateCurveFloat(0, 50, (mDisplayTime - mDuration) * aTextSpeed - aPos, 0.0f, 40.0f, TodCurves::CURVE_LINEAR);
 			}
 		}
 		else
@@ -281,36 +212,37 @@ void MessageWidget::Update()
 			{
 				aTextReanim->PlayReanim("anim_leave", ReanimLoopType::REANIM_PLAY_ONCE_AND_HOLD, 0, 0.0f);
 			}
-			aTextReanim->mAnimRate = PvzpAnimateCurveFloat(0, 50, (mSlideOffTime - mDuration) * aTextSpeed - aCharIdx, 0.0f, 40.0f, PvzpCurves::CURVE_LINEAR);
+			aTextReanim->mAnimRate = TodAnimateCurveFloat(0, 50, (mSlideOffTime - mDuration) * aTextSpeed - aPos, 0.0f, 40.0f, TodCurves::CURVE_LINEAR);
 		}
 
-		aTextReanim->Update();
+		aTextReanim->Update();  
 	}
 }
 
-void MessageWidget::DrawReanimatedText(Graphics* g, _Font* theFont, const Color& theColor, float thePosY)
+void MessageWidget::DrawReanimatedText(Graphics* g, Font* theFont, const Color& theColor, float thePosY)
 {
-	for (int aCharIdx = 0; aCharIdx < mTextReanimCount; aCharIdx++)
+	int aLabelLen = strlen(mLabel);
+	for (int aPos = 0; aPos < aLabelLen; aPos++)
 	{
-		Reanimation* aTextReanim = mApp->ReanimationTryToGet(mTextReanimID[aCharIdx]);
+		Reanimation* aTextReanim = mApp->ReanimationTryToGet(mTextReanimID[aPos]);
 		if (aTextReanim == nullptr)
 		{
-			break;
+			break;  
 		}
 
 		ReanimatorTransform aTransform;
 		aTextReanim->GetCurrentTransform(2, &aTransform);
 
-		int anAlpha = std::clamp(FloatRoundToInt(theColor.mAlpha * aTransform.mAlpha), 0, 255);
+		int anAlpha = ClampInt(FloatRoundToInt(theColor.mAlpha * aTransform.mAlpha), 0, 255);
 		if (anAlpha <= 0)
 		{
-			break;
+			break;  
 		}
 		Color aFinalColor(theColor);
 		aFinalColor.mAlpha = anAlpha;
 
-		aTransform.mTransX += aTextReanim->mOverlayMatrix.m02;
-		aTransform.mTransY += aTextReanim->mOverlayMatrix.m12 + thePosY - BOARD_HEIGHT / 2;
+		aTransform.mTransX += aTextReanim->mOverlayMatrix.m02 + BOARD_ADDITIONAL_WIDTH;
+		aTransform.mTransY = thePosY;
 		if (mReanimType == ReanimationType::REANIM_TEXT_FADE_ON && mDisplayTime - mDuration < mSlideOffTime)
 		{
 			float aStretch = 1.0f - aTextReanim->mAnimTime;
@@ -319,14 +251,13 @@ void MessageWidget::DrawReanimatedText(Graphics* g, _Font* theFont, const Color&
 
 		SexyMatrix3 aMatrix;
 		Reanimation::MatrixFromTransform(aTransform, aMatrix);
-		const int aByteStart = mTextReanimByteOffset[aCharIdx];
-		const int aByteEnd = (aCharIdx + 1 < mTextReanimCount) ? mTextReanimByteOffset[aCharIdx + 1] : strlen(mLabel);
-		std::string aLetter(&mLabel[aByteStart], aByteEnd - aByteStart);
-		PvzpDrawStringMatrix(g, theFont, aMatrix, aLetter, aFinalColor);
+		SexyString aLetter;
+		aLetter.append(1, mLabel[aPos]);
+		TodDrawStringMatrix(g, theFont, aMatrix, aLetter, aFinalColor);
 	}
 }
 
-_Font* MessageWidget::GetFont()
+Font* MessageWidget::GetFont()
 {
 	switch (mMessageStyle)
 	{
@@ -346,17 +277,13 @@ _Font* MessageWidget::GetFont()
 	case MessageStyle::MESSAGE_STYLE_HOUSE_NAME:
 	case MessageStyle::MESSAGE_STYLE_HUGE_WAVE:
 	case MessageStyle::MESSAGE_STYLE_ZEN_GARDEN_LONG:
-	case MessageStyle::MESSAGE_STYLE_ACHIEVEMENT:
 		return Sexy::FONT_HOUSEOFTERROR28;
 
 	case MessageStyle::MESSAGE_STYLE_SLOT_MACHINE:
 		return Sexy::FONT_HOUSEOFTERROR16;
-	case MessageStyle::MESSAGE_STYLE_OFF:
-		break;
 	}
 
-	PVZP_ASSERT(false);
-	unreachable();
+	TOD_ASSERT();
 }
 
 void MessageWidget::Draw(Graphics* g)
@@ -364,10 +291,10 @@ void MessageWidget::Draw(Graphics* g)
 	if (mDuration <= 0)
 		return;
 
-	_Font* aFont = GetFont();
-	_Font* aOutlineFont = nullptr;
+	Font* aFont = GetFont();
+	Font* aOutlineFont = nullptr;
 	int aPosX = BOARD_WIDTH / 2;
-	int aPosY = 596;
+	int aPosY = BOARD_HEIGHT - 4;
 	int aTextOffsetY = 0;
 	int aRectHeight = 0;
 	int aMinAlpha = 255;
@@ -383,7 +310,7 @@ void MessageWidget::Draw(Graphics* g)
 	{
 	case MessageStyle::MESSAGE_STYLE_TUTORIAL_LEVEL1:
 	case MessageStyle::MESSAGE_STYLE_TUTORIAL_LEVEL1_STAY:
-		aPosY = 400;
+		aPosY = BOARD_HEIGHT - 200;
 		aRectHeight = 110;
 		aTextOffsetY = -4;
 		aColor = Color(253, 245, 173);
@@ -396,8 +323,7 @@ void MessageWidget::Draw(Graphics* g)
 	case MessageStyle::MESSAGE_STYLE_HINT_TALL_FAST:
 	case MessageStyle::MESSAGE_STYLE_HINT_TALL_UNLOCKMESSAGE:
 	case MessageStyle::MESSAGE_STYLE_HINT_TALL_LONG:
-	case MessageStyle::MESSAGE_STYLE_ACHIEVEMENT:
-		aPosY = 476;
+		aPosY = BOARD_HEIGHT - 124;
 		aRectHeight = 100;
 		aTextOffsetY = -4;
 		aColor = Color(253, 245, 173);
@@ -407,7 +333,7 @@ void MessageWidget::Draw(Graphics* g)
 	case MessageStyle::MESSAGE_STYLE_HINT_LONG:
 	case MessageStyle::MESSAGE_STYLE_HINT_FAST:
 	case MessageStyle::MESSAGE_STYLE_HINT_STAY:
-		aPosY = 527;
+		aPosY = BOARD_HEIGHT - 73;
 		aRectHeight = 55;
 		aTextOffsetY = -4;
 		aColor = Color(253, 245, 173);
@@ -416,20 +342,20 @@ void MessageWidget::Draw(Graphics* g)
 
 	case MessageStyle::MESSAGE_STYLE_BIG_MIDDLE:
 	case MessageStyle::MESSAGE_STYLE_BIG_MIDDLE_FAST:
-		aPosY = 300;
+		aPosY = BOARD_HEIGHT / 2;
 		aRectHeight = 110;
 		aColor = Color(253, 245, 173);
 		aMinAlpha = 192;
 		break;
 
 	case MessageStyle::MESSAGE_STYLE_HOUSE_NAME:
-		aPosY = 550;
+		aPosY = BOARD_HEIGHT - 50;
 		aColor = Color(255, 255, 255, 255);
 		aFadeOut = true;
 		break;
 
 	case MessageStyle::MESSAGE_STYLE_HUGE_WAVE:
-		aPosY = 330;
+		aPosY = BOARD_HEIGHT / 2 + 15;
 		aColor = Color(255, 0, 0);
 		break;
 
@@ -440,7 +366,7 @@ void MessageWidget::Draw(Graphics* g)
 		break;
 
 	case MessageStyle::MESSAGE_STYLE_ZEN_GARDEN_LONG:
-		aPosY = 514;
+		aPosY = BOARD_HEIGHT - 86;
 		aRectHeight = 55;
 		aTextOffsetY = -4;
 		aColor = Color(253, 245, 173);
@@ -448,7 +374,7 @@ void MessageWidget::Draw(Graphics* g)
 		break;
 
 	default:
-		PVZP_ASSERT(false);
+		TOD_ASSERT();
 		break;
 	}
 
@@ -464,12 +390,12 @@ void MessageWidget::Draw(Graphics* g)
 	{
 		if (aMinAlpha != 255)
 		{
-			aColor.mAlpha = PvzpAnimateCurve(75, 0, mApp->mBoard->mMainCounter % 75, aMinAlpha, 255, PvzpCurves::CURVE_BOUNCE_SLOW_MIDDLE);
+			aColor.mAlpha = TodAnimateCurve(75, 0, mApp->mBoard->mMainCounter % 75, aMinAlpha, 255, TodCurves::CURVE_BOUNCE_SLOW_MIDDLE);
 			aOutlineColor.mAlpha = aColor.mAlpha;
 		}
 		if (aFadeOut)
 		{
-			aColor.mAlpha = std::clamp(mDuration * 15, 0, 255);
+			aColor.mAlpha = ClampInt(mDuration * 15, 0, 255);
 			aOutlineColor.mAlpha = aColor.mAlpha;
 		}
 
@@ -481,39 +407,26 @@ void MessageWidget::Draw(Graphics* g)
 			g->FillRect(aRect);
 
 			aRect.mY += aTextOffsetY;
-			PvzpDrawStringWrapped(g, mLabel, aRect, aFont, aColor, DrawStringJustification::DS_ALIGN_CENTER_VERTICAL_MIDDLE);
+			TodDrawStringWrapped(g, mLabel, aRect, aFont, aColor, DrawStringJustification::DS_ALIGN_CENTER_VERTICAL_MIDDLE);
 		}
 		else
 		{
 			Rect aRect(aPosX - mApp->mBoard->mX - BOARD_WIDTH / 2, aPosY - aFont->mAscent, BOARD_WIDTH, BOARD_HEIGHT);
 			if (aOutlineFont)
 			{
-				PvzpDrawStringWrapped(g, mLabel, aRect, aOutlineFont, aOutlineColor, DrawStringJustification::DS_ALIGN_CENTER);
+				TodDrawStringWrapped(g, mLabel, aRect, aOutlineFont, aOutlineColor, DrawStringJustification::DS_ALIGN_CENTER);
 			}
-			PvzpDrawStringWrapped(g, mLabel, aRect, aFont, aColor, DrawStringJustification::DS_ALIGN_CENTER);
+			TodDrawStringWrapped(g, mLabel, aRect, aFont, aColor, DrawStringJustification::DS_ALIGN_CENTER);
 		}
 
 		if (mMessageStyle == MessageStyle::MESSAGE_STYLE_HOUSE_NAME)
 		{
-			std::string aSubStr;
 			if (mApp->IsSurvivalMode() && mApp->mBoard->mChallenge->mSurvivalStage > 0)
 			{
 				int aFlags = mApp->mBoard->GetNumWavesPerSurvivalStage() * mApp->mBoard->mChallenge->mSurvivalStage / mApp->mBoard->GetNumWavesPerFlag();
-				std::string aFlagStr = mApp->Pluralize(aFlags, "[ONE_FLAG]", "[COUNT_FLAGS]");
-				aSubStr = PvzpReplaceString("[FLAGS_COMPLETED]", "{FLAGS}", aFlagStr);
-			}
-
-			if (aSubStr.size() > 0)
-			{
-				PvzpDrawString(
-					g,
-					aSubStr,
-					BOARD_WIDTH / 2 - mApp->mBoard->mX,
-					aPosY + 26,
-					Sexy::FONT_HOUSEOFTERROR16,
-					Color(224, 187, 62, aColor.mAlpha),
-					DrawStringJustification::DS_ALIGN_CENTER
-				);
+				SexyString aFlagStr = mApp->Pluralize(aFlags, _S("[ONE_FLAG]"), _S("[COUNT_FLAGS]"));
+				SexyString aSubStr = TodReplaceString(_S("[FLAGS_COMPLETED]"), _S("{FLAGS}"), aFlagStr);
+				TodDrawString(g, aSubStr, BOARD_WIDTH / 2 - mApp->mBoard->mX, aPosY + 26, Sexy::FONT_HOUSEOFTERROR16, Color(224, 187, 62, aColor.mAlpha), DrawStringJustification::DS_ALIGN_CENTER);
 			}
 		}
 	}
