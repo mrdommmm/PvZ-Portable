@@ -1,38 +1,15 @@
-/*
- * Copyright (C) 2026 Zhou Qiankang <wszqkzqk@qq.com>
- *
- * SPDX-License-Identifier: LGPL-3.0-or-later
- *
- * This file is part of PvZ-Portable.
- *
- * PvZ-Portable is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * PvZ-Portable is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with PvZ-Portable. If not, see <https://www.gnu.org/licenses/>.
- */
-
 #include "NewUserDialog.h"
 #include "../../LawnApp.h"
 #include "../../Resources.h"
-#include "../LawnCommon.h"
-#include "widget/WidgetManager.h"
+#include "../../SexyAppFramework/WidgetManager.h"
 
 NewUserDialog::NewUserDialog(LawnApp* theApp, bool isRename) : LawnDialog(
-	theApp,
-	isRename ? Dialogs::DIALOG_RENAMEUSER : Dialogs::DIALOG_CREATEUSER,
-	true,
-	// these localization strings don't exist
-	isRename ? theApp->GetString("RENAME_USER", "RENAME USER") : theApp->GetString("NEW_USER", "NEW USER"),
-	theApp->GetString("PLEASE_ENTER_NAME", "Please enter your name:"),
-	"[DIALOG_BUTTON_OK]",
+	theApp, 
+	isRename ? Dialogs::DIALOG_RENAMEUSER : Dialogs::DIALOG_CREATEUSER, 
+	true, 
+	isRename ? _S("[RENAME_USER]") : _S("[NEW_USER]"),
+	_S("[PLEASE_ENTER_NAME]"),
+	_S("[DIALOG_BUTTON_OK]"), 
 	Dialog::BUTTONS_OK_CANCEL)
 {
 	mApp = theApp;
@@ -78,38 +55,37 @@ void NewUserDialog::Draw(Graphics* g)
 	DrawEditBox(g, mNameEditWidget);
 }
 
-void NewUserDialog::EditWidgetText(int theId, const std::string& theString)
+void NewUserDialog::EditWidgetText(int theId, const SexyString& theString)
 {
-	(void)theId;(void)theString;
 	mApp->ButtonDepress(mId + 2000);
 }
 
-bool NewUserDialog::AllowChar(int, char theChar)
+bool NewUserDialog::AllowChar(int, SexyChar theChar)
 {
-	return isalnum(theChar) || theChar == ' ';
+	return isalnum(theChar) || theChar == _S(' ');
 }
 
-std::string NewUserDialog::GetName()
+SexyString NewUserDialog::GetName()
 {
-	std::string aString;
-	char aLastChar = ' ';
+	SexyString aString;
+	SexyChar aLastChar = _S(' ');
 
-	for (size_t i = 0; i < mNameEditWidget->mString.size(); i++)
+	for (int i = 0; i < mNameEditWidget->mString.size(); i++)
 	{
-		char aChar = mNameEditWidget->mString[i];
-		if (aChar != ' ')
+		SexyChar aChar = mNameEditWidget->mString[i];
+		if (aChar != _S(' '))
 		{
 			aString.append(1, aChar);
 		}
 		else if (aChar != aLastChar)
 		{
-			aString.append(1, ' ');
+			aString.append(1, _S(' '));
 		}
 
 		aLastChar = aChar;
 	}
 
-	if (aString.size() && aString[aString.size() - 1] == ' ')
+	if (aString.size() && aString[aString.size() - 1] == _S(' '))
 	{
 		aString.resize(aString.size() - 1);
 	}
@@ -117,7 +93,7 @@ std::string NewUserDialog::GetName()
 	return aString;
 }
 
-void NewUserDialog::SetName(const std::string& theName)
+void NewUserDialog::SetName(const SexyString& theName)
 {
 	mNameEditWidget->SetText(theName, true);
 	mNameEditWidget->mCursorPos = theName.size();

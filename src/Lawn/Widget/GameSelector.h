@@ -1,157 +1,149 @@
-/*
- * Copyright (C) 2026 Zhou Qiankang <wszqkzqk@qq.com>
- *
- * SPDX-License-Identifier: LGPL-3.0-or-later
- *
- * This file is part of PvZ-Portable.
- *
- * PvZ-Portable is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * PvZ-Portable is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with PvZ-Portable. If not, see <https://www.gnu.org/licenses/>.
- */
-
 #ifndef __GAMESELECTOR_H__
 #define __GAMESELECTOR_H__
 
 #include "../../ConstEnums.h"
-#include "widget/Widget.h"
-#include "widget/ButtonListener.h"
-#include "AchievementsScreen.h"
-#include "GameButton.h"
+#include "../../SexyAppFramework/Widget.h"
+#include "../../SexyAppFramework/ButtonListener.h"
 
 class LawnApp;
 class ToolTipWidget;
-class ZombatarWidget;
+class AchievementScreen;
 namespace Sexy
 {
-	class DialogButton;
+    class DialogButton;
 }
 
 using namespace Sexy;
 
 enum SelectorAnimState
 {
-	SELECTOR_OPEN,
-	SELECTOR_NEW_USER,
-	SELECTOR_SHOW_SIGN,
-	SELECTOR_IDLE
+    SELECTOR_OPEN,
+    SELECTOR_NEW_USER,
+    SELECTOR_SHOW_SIGN,
+    SELECTOR_SUB_MENU,
+    SELECTOR_IDLE,
 };
 
 class GameSelector : public Widget, public ButtonListener
 {
 private:
-	enum
-	{
-		GameSelector_Adventure = 100,
-		GameSelector_Minigame,
-		GameSelector_Puzzle,
-		GameSelector_Options,
-		GameSelector_Help,
-		GameSelector_Quit,
-		GameSelector_ChangeUser,
-		GameSelector_Store,
-		GameSelector_Almanac,
-		GameSelector_ZenGarden,
-		GameSelector_Survival,
-		GameSelector_Zombatar,
-		GameSelector_Achievements
-	};
+    enum
+    {
+        GameSelector_Adventure = 100,
+        GameSelector_Minigame = 101,
+        GameSelector_Puzzle = 102,
+        GameSelector_Options = 103,
+        GameSelector_Help = 104,
+        GameSelector_Quit = 105,
+        GameSelector_ChangeUser = 106,
+        GameSelector_Store = 107,
+        GameSelector_Almanac = 108,
+        GameSelector_ZenGarden = 109,
+        GameSelector_Survival = 110,
+        GameSelector_Achievement = 111,
+        GameSelector_QuickPlay = 112,
+        GameSelector_Credits = 113,
+        GameSelector_More = 114,
+        GameSelector_MoreBack = 115,
+        GameSelector_Extras = 116,
+        GameSelector_ExtrasBack = 117
+    };
 
 public:
-	LawnApp*                    mApp;
-	NewLawnButton*              mAdventureButton;
-	NewLawnButton*              mMinigameButton;
-	NewLawnButton*              mPuzzleButton;
-	NewLawnButton*              mOptionsButton;
-	NewLawnButton*              mQuitButton;
-	NewLawnButton*              mHelpButton;
-	NewLawnButton*              mStoreButton;
-	NewLawnButton*              mAlmanacButton;
-	NewLawnButton*              mZenGardenButton;
-	NewLawnButton*              mSurvivalButton;
-	NewLawnButton*              mChangeUserButton;
-	NewLawnButton*              mZombatarButton;             //+0xC0
-	NewLawnButton*              mAchievementsButton;        //+0xC4
-	Widget*                     mOverlayWidget;
-	bool                        mStartingGame;
-	int                         mStartingGameCounter;
-	bool                        mMinigamesLocked;
-	bool                        mPuzzleLocked;
-	bool                        mSurvivalLocked;
-	bool                        mShowStartButton;
-	ParticleSystemID            mTrophyParticleID;
-	ReanimationID               mSelectorReanimID;
-	ReanimationID               mCloudReanimID[6];
-	int                         mCloudCounter[6];
-	ReanimationID               mFlowerReanimID[3];
-	ReanimationID               mLeafReanimID;
-	ReanimationID               mHandReanimID;
-	int                         mLeafCounter;
-	SelectorAnimState           mSelectorState;
-	int                         mLevel;
-	bool                        mLoading;
-	ToolTipWidget*              mToolTip;
-	bool                        mHasTrophy;
-	bool                        mUnlockSelectorCheat;
-	int                         mSlideCounter;              //+0x154
-	int                         mStartX;                    //+0x158
-	int                         mStartY;                    //+0x15C
-	int                         mDestX;                     //+0x160
-	int                         mDestY;                     //+0x164
-	ZombatarWidget*             mZombatarWidget;            //+0x168
-	AchievementsWidget*         mAchievementsWidget;        //+0x16C
+    LawnApp* mApp;
+    NewLawnButton* mAdventureButton;
+    NewLawnButton* mMinigameButton;
+    NewLawnButton* mPuzzleButton;
+    NewLawnButton* mOptionsButton;
+    NewLawnButton* mQuitButton;
+    NewLawnButton* mHelpButton;
+    NewLawnButton* mStoreButton;
+    NewLawnButton* mAlmanacButton;
+    NewLawnButton* mZenGardenButton;
+    NewLawnButton* mAchievementButton;
+    NewLawnButton* mQuickPlayButton;
+    NewLawnButton* mCreditsButton;
+    NewLawnButton* mMoreButton;
+    NewLawnButton* mMoreBackButton;
+    NewLawnButton* mExtrasButton;
+    NewLawnButton* mExtrasBackButton;
+    NewLawnButton* mSurvivalButton;
+    NewLawnButton* mChangeUserButton;
+    Widget* mOverlayWidget;
+    bool                        mStartingGame;
+    int                         mStartingGameCounter;
+    bool                        mMinigamesLocked;
+    bool                        mPuzzleLocked;
+    bool                        mSurvivalLocked;
+    bool                        mShowStartButton;
+    ParticleSystemID            mTrophyParticleID;
+    ReanimationID               mSelectorReanimID;
+    ReanimationID               mCloudReanimID[6];
+    int                         mCloudCounter[6];
+    ReanimationID               mFlowerReanimID[3];
+    ReanimationID               mLeafReanimID;
+    ReanimationID               mHandReanimID;
+    ReanimationID               mMainFlowerReanimID;
+    ReanimationID               mExtraFlowerReanimID;
+    ReanimationID               mPurpleCloudReanimID;
+    ReanimationID               mGraveyardReanimID;
+    ReanimationID               mGraveyardleavesReanimID;
+    ReanimationID               mTombstoneOverlayerReanimID;
+    int                         mLeafCounter;
+    SelectorAnimState           mSelectorState;
+    int                         mLevel;
+    bool                        mLoading;
+    ToolTipWidget* mToolTip;
+    bool                        mHasTrophy;
+    bool                        mUnlockSelectorCheat;
+    bool                        mDebugText;
+    int                         mMovementTimer;
+    int                         mCurrentY;
+    int                         mDestinationY;
+    int                         mCurrentX;
+    int                         mDestinationX;
+    bool                        mEnableButtonsTransition;
+    bool                        mLeftSide;
+    bool                        mRightSide;
 
 public:
-	GameSelector(LawnApp* theApp);
-	~GameSelector() override;
+    GameSelector(LawnApp* theApp);
+    virtual ~GameSelector();
 
-	void                        SyncProfile(bool theShowLoading);
-	void                        Draw(Graphics* g) override;
-	void                        DrawOverlay(Graphics* g) override;
-	void                        Update() override;
-	void                        AddedToManager(WidgetManager* theWidgetManager) override;
-	void                        RemovedFromManager(WidgetManager* theWidgetManager) override;
-	void                        OrderInManagerChanged() override;
-	void                        ButtonMouseEnter(int theId) override;
-	void                        ButtonPress(int theId) override;
-	void                        ButtonDepress(int theId) override;
-	void                        ButtonDownTick(int) override{}
-	void                        ButtonMouseLeave(int) override{}
-	void                        ButtonMouseMove(int, int, int) override{}
-	void                        KeyDown(KeyCode theKey) override;
-	void                        KeyChar(char theChar) override;
-	void                        MouseDown(int x, int y, int theClickCount) override;
-	void                        TrackButton(DialogButton* theButton, const char* theTrackName, float theOffsetX, float theOffsetY);
-	void                        SyncButtons();
-	void                        AddTrophySparkle();
-	void                        ClickedAdventure();
-	void                        UpdateTooltip();
-	bool             ShouldDoZenTuturialBeforeAdventure();
-	void                        AddPreviewProfiles();
-	void             SlideTo(int theX, int theY);
-	void                        ShowZombatarScreen();
-	void                        ShowAchievementsScreen();
+    void                        SyncProfile(bool theShowLoading);
+    virtual void                Draw(Graphics* g);
+    virtual void                DrawOverlay(Graphics* g);
+    virtual void                Update();
+    virtual void                AddedToManager(WidgetManager* theWidgetManager);
+    virtual void                RemovedFromManager(WidgetManager* theWidgetManager);
+    virtual void                OrderInManagerChanged();
+    virtual void                ButtonMouseEnter(int theId);
+    virtual void                ButtonPress(int theId, int theClickCount);
+    virtual void                ButtonDepress(int theId);
+    virtual void                KeyDown(KeyCode theKey);
+    virtual void                KeyChar(char theChar);
+    virtual void                MouseDown(int x, int y, int theClickCount);
+    void                        TrackButton(DialogButton* theButton, const char* theTrackName, float theOffsetX, float theOffsetY);
+    void                        SyncButtons();
+    void                        AddTrophySparkle();
+    void                        ClickedAdventure();
+    void                        UpdateTooltip();
+    /*inline*/ bool              ShouldDoZenTuturialBeforeAdventure();
+    void                        AddPreviewProfiles();
+    void                        KeyChar();
+    int                         CalcYPos(int ogY, int newY);
+    int                         CalcXPos(int ogX, int newX);
 };
 
 class GameSelectorOverlay : public Widget
 {
 public:
-	GameSelector*               mParent;
+    GameSelector* mParent;
 
 public:
-	GameSelectorOverlay(GameSelector* theGameSelector);
-	~GameSelectorOverlay() override { }
+    GameSelectorOverlay(GameSelector* theGameSelector);
+    virtual ~GameSelectorOverlay() {}
 
-	void         Draw(Graphics* g) override;
+    virtual void Draw(Graphics* g);
 };
-
 #endif

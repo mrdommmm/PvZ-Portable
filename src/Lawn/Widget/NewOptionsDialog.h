@@ -1,31 +1,9 @@
-/*
- * Copyright (C) 2026 Zhou Qiankang <wszqkzqk@qq.com>
- *
- * SPDX-License-Identifier: LGPL-3.0-or-later
- *
- * This file is part of PvZ-Portable.
- *
- * PvZ-Portable is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * PvZ-Portable is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with PvZ-Portable. If not, see <https://www.gnu.org/licenses/>.
- */
-
 #ifndef __NEWOPTIONSDIALOG_H__
 #define __NEWOPTIONSDIALOG_H__
-
-#include "widget/Dialog.h"
-#include "widget/SliderListener.h"
-#include "widget/CheckboxListener.h"
-
+#include "../../SexyAppFramework/Dialog.h"
+#include "../../SexyAppFramework/SliderListener.h"
+#include "../../SexyAppFramework/CheckboxListener.h"
+#include "../../SexyAppFramework/EditListener.h"
 class LawnApp;
 class LawnStoneButton;
 class NewLawnButton;
@@ -34,8 +12,8 @@ namespace Sexy
 	class Slider;
 	class Checkbox;
 };
-
-class NewOptionsDialog : public Sexy::Dialog, public Sexy::SliderListener, public Sexy::CheckboxListener
+class NewOptionsDialog : public Sexy::Dialog, public Sexy::SliderListener, public
+	Sexy::CheckboxListener, public EditListener
 {
 protected:
 	enum
@@ -43,39 +21,89 @@ protected:
 		NewOptionsDialog_Almanac,
 		NewOptionsDialog_MainMenu,
 		NewOptionsDialog_Restart,
-		NewOptionsDialog_Update,
 		NewOptionsDialog_MusicVolume,
 		NewOptionsDialog_SoundVolume,
+		NewOptionsDialog_Difficulty,
 		NewOptionsDialog_Fullscreen,
 		NewOptionsDialog_HardwareAcceleration,
+		NewOptionsDialog_Advanced,
+		NewOptionsDialog_ReloadLanguages,
+		NewOptionsDialog_Language,
+		NewOptionsDialog_ReloadResourcePacks,
+		NewOptionsDialog_ResourcePack,
+		NewOptionsDialog_Real_HardwareAcceleration,
+		NewOptionsDialog_CustomCursor,
+		NewOptionsDialog_LeftPage,
+		NewOptionsDialog_RightPage,
+		NewOptionsDialog_BitsLeft,
+		NewOptionsDialog_BitsRight,
+		NewOptionsDialog_Back,
+		NewOptionsDialog_DebugMode,
+		NewOptionsDialog_Discord,
+		NewOptionsDialog_BankKeybinds,
+		NewOptionsDialog_09Format,
+		NewOptionsDialog_AutoCollectSuns,
+		NewOptionsDialog_AutoCollectCoins,
+		NewOptionsDialog_ZombieHealthbars,
+		NewOptionsDialog_PlantHealthbars,
+		NewOptionsDialog_DifficultyLeft,
+		NewOptionsDialog_DifficultyRight
 	};
-
 public:
-	LawnApp*				mApp;
-	Sexy::Slider*			mMusicVolumeSlider;
-	Sexy::Slider*			mSfxVolumeSlider;
-	Sexy::Checkbox*			mFullscreenCheckbox;
-	Sexy::Checkbox*			mHardwareAccelerationCheckbox;
-	LawnStoneButton*		mAlmanacButton;
-	LawnStoneButton*		mBackToMainButton;
-	LawnStoneButton*		mRestartButton;
-	NewLawnButton*			mBackToGameButton;
-	bool					mFromGameSelector;
-
+	LawnApp* mApp;
+	Sexy::Slider* mMusicVolumeSlider;
+	Sexy::Slider* mSfxVolumeSlider;
+	Sexy::Slider* mDifficultySlider;
+	Sexy::Checkbox* mFullscreenCheckbox;
+	Sexy::Checkbox* mHardwareAccelerationCheckbox;
+	Sexy::Checkbox* mDebugModeCheckbox;
+	Sexy::Checkbox* mDiscordCheckbox;
+	Sexy::Checkbox* mBankKeybindsCheckbox;
+	Sexy::Checkbox* m09FormatCheckbox;
+	Sexy::Checkbox* mAutoCollectSunsCheckbox;
+	Sexy::Checkbox* mAutoCollectCoinsCheckbox;
+	Sexy::Checkbox* mZombieHealthbarsCheckbox;
+	Sexy::Checkbox* mPlantHealthbarsCheckbox;
+	LawnStoneButton* mAlmanacButton;
+	LawnStoneButton* mBackToMainButton;
+	LawnStoneButton* mRestartButton;
+	NewLawnButton* mBackToGameButton;
+	LawnStoneButton* mAdvancedButton;
+	NewLawnButton* mGameAdvancedButton;
+	NewLawnButton* mRightPageButton;
+	NewLawnButton* mLeftPageButton;
+	NewLawnButton* mBitsLeftButton;
+	NewLawnButton* mBitsRightButton;
+	NewLawnButton* mDifficultyLeftButton;
+	NewLawnButton* mDifficultyRightButton;
+	bool mFromGameSelector;
+	bool mAdvancedMode;
+	int mAdvancedPage;
+	int mBitsValue;
+	EditWidget* mSpeedEditWidget;
+	SexyString mSpeedEditPrevText;
+	LawnStoneButton* mReloadLanguagesButton;
+	NewLawnButton* mLanguageButton;
+	LawnStoneButton* mReloadResourcePacksButton;
+	NewLawnButton* mResourcePackButton;
+	Sexy::Checkbox* mRealHardwareAccelerationCheckbox;
+	Sexy::Checkbox* mCustomCursorCheckbox;
 public:
-	NewOptionsDialog(LawnApp* theApp, bool theFromGameSelector);
-	~NewOptionsDialog() override;
-
-	int						GetPreferredHeight(int theWidth) override;
-	void					AddedToManager(Sexy::WidgetManager* theWidgetManager) override;
-	void					RemovedFromManager(Sexy::WidgetManager* theWidgetManager) override;
-	void					Resize(int theX, int theY, int theWidth, int theHeight) override;
-	void					Draw(Sexy::Graphics* g) override;
-	void					SliderVal(int theId, double theVal) override;
-	void					CheckboxChecked(int theId, bool checked) override;
-	void					ButtonPress(int theId) override;
-	void					ButtonDepress(int theId) override;
-	void					KeyDown(Sexy::KeyCode theKey) override;
+	NewOptionsDialog(LawnApp* theApp, bool theFromGameSelector, bool theAdvanced);
+	~NewOptionsDialog();
+	int GetPreferredHeight(int theWidth);
+	void AddedToManager(Sexy::WidgetManager* theWidgetManager);
+	void RemovedFromManager(Sexy::WidgetManager* theWidgetManager);
+	void Resize(int theX, int theY, int theWidth, int theHeight);
+	void Draw(Sexy::Graphics* g);
+	void SliderVal(int theId, double theVal);
+	void CheckboxChecked(int theId, bool checked);
+	void ButtonPress(int theId);
+	void ButtonDepress(int theId);
+	void KeyDown(Sexy::KeyCode theKey);
+	void UpdateAdvancedPage();
+	void Update();
+	void ResizeLanguageButton();
+	void ResizeResourcePackButton();
 };
-
 #endif

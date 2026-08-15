@@ -1,24 +1,3 @@
-/*
- * Copyright (C) 2026 Zhou Qiankang <wszqkzqk@qq.com>
- *
- * SPDX-License-Identifier: LGPL-3.0-or-later
- *
- * This file is part of PvZ-Portable.
- *
- * PvZ-Portable is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * PvZ-Portable is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with PvZ-Portable. If not, see <https://www.gnu.org/licenses/>.
- */
-
 #include "../Plant.h"
 #include "GameButton.h"
 #include "../SeedPacket.h"
@@ -27,13 +6,10 @@
 #include "SeedChooserScreen.h"
 #include "../ToolTipWidget.h"
 #include "../../GameConstants.h"
-#include "widget/WidgetManager.h"
+#include "../../SexyAppFramework/WidgetManager.h"
 
-constexpr const int IMITATER_DIALOG_WIDTH = 500;
-constexpr const int IMITATER_DIALOG_HEIGHT = 600;
-
-ImitaterDialog::ImitaterDialog() :
-	LawnDialog(gLawnApp, Dialogs::DIALOG_IMITATER, true, "[CHOOSE_SEED_TO_COPY]", "", "[DIALOG_BUTTON_OK]", Dialog::BUTTONS_YES_NO)
+ImitaterDialog::ImitaterDialog() : 
+	LawnDialog(gLawnApp, Dialogs::DIALOG_IMITATER, true, _S("[CHOOSE_SEED_TO_COPY]"), _S(""), _S("[DIALOG_BUTTON_OK]"), Dialog::BUTTONS_YES_NO)
 {
 	CalcSize(IMITATER_DIALOG_WIDTH - mWidth, IMITATER_DIALOG_HEIGHT - mHeight);
 	mToolTip = new ToolTipWidget();
@@ -54,7 +30,7 @@ SeedType ImitaterDialog::SeedHitTest(int x, int y)
 {
 	for (SeedType aSeedType = (SeedType)0; aSeedType < SeedType::SEED_GATLINGPEA; aSeedType = (SeedType)(aSeedType + 1))
 	{
-		if (mApp->HasSeedType(aSeedType))
+		if (mApp->SeedTypeAvailable(aSeedType))
 		{
 			int aSeedX, aSeedY;
 			GetSeedPosition(aSeedType, aSeedX, aSeedY);
@@ -99,7 +75,7 @@ void ImitaterDialog::Draw(Graphics* g)
 	g->SetLinearBlend(true);
 	for (SeedType aSeedType = (SeedType)0; aSeedType < SeedType::SEED_GATLINGPEA; aSeedType = (SeedType)(aSeedType + 1))
 	{
-		if (mApp->HasSeedType(aSeedType))
+		if (mApp->SeedTypeAvailable(aSeedType))
 		{
 			int aSeedX, aSeedY;
 			GetSeedPosition(aSeedType, aSeedX, aSeedY);
@@ -117,7 +93,7 @@ void ImitaterDialog::ShowToolTip()
 		RemoveToolTip();
 		return;
 	}
-
+	
 	SeedType aSeedType = SeedHitTest(mApp->mWidgetManager->mLastMouseX - mX, mApp->mWidgetManager->mLastMouseY - mY);
 	if (aSeedType == SeedType::SEED_NONE)
 	{
@@ -127,24 +103,24 @@ void ImitaterDialog::ShowToolTip()
 	{
 		RemoveToolTip();
 		uint aRecFlags = mApp->mSeedChooserScreen->SeedNotRecommendedToPick(aSeedType);
-		if (mApp->mSeedChooserScreen->SeedNotAllowedToPick(aSeedType))
+		if (mApp->mSeedChooserScreen->SeedNotAllowedToPick(aSeedType))  
 		{
-			mToolTip->SetWarningText("[NOT_ALLOWED_ON_THIS_LEVEL]");
+			mToolTip->SetWarningText(_S("[NOT_ALLOWED_ON_THIS_LEVEL]"));
 		}
-		else if (aRecFlags)
+		else if (aRecFlags)  
 		{
 			if (TestBit(aRecFlags, NotRecommend::NOT_RECOMMENDED_NOCTURNAL))
 			{
-				mToolTip->SetWarningText("[NOCTURNAL_WARNING]");
+				mToolTip->SetWarningText(_S("[NOCTURNAL_WARNING]"));
 			}
 			else
 			{
-				mToolTip->SetWarningText("[NOT_RECOMMENDED_FOR_LEVEL]");
+				mToolTip->SetWarningText(_S("[NOT_RECOMMENDED_FOR_LEVEL]"));
 			}
 		}
 		else
 		{
-			mToolTip->SetWarningText("");
+			mToolTip->SetWarningText(_S(""));
 		}
 		mToolTip->SetTitle(Plant::GetNameString(SeedType::SEED_IMITATER, aSeedType));
 		mToolTip->SetLabel(Plant::GetToolTip(aSeedType));
@@ -178,7 +154,7 @@ void ImitaterDialog::MouseDown(int x, int y, int theClickCount)
 			aImitater.mX = aSeedChooser->mImitaterButton->mX;
 			aImitater.mY = aSeedChooser->mImitaterButton->mY;
 			aSeedChooser->ClickedSeedInChooser(aImitater);
-			aSeedChooser->UpdateImitaterButton();
+			//aSeedChooser->UpdateImitaterButton();
 			mApp->KillDialog(mId);
 		}
 	}

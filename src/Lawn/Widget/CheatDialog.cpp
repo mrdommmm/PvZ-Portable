@@ -1,24 +1,3 @@
-/*
- * Copyright (C) 2026 Zhou Qiankang <wszqkzqk@qq.com>
- *
- * SPDX-License-Identifier: LGPL-3.0-or-later
- *
- * This file is part of PvZ-Portable.
- *
- * PvZ-Portable is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * PvZ-Portable is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with PvZ-Portable. If not, see <https://www.gnu.org/licenses/>.
- */
-
 #include "CheatDialog.h"
 #include "../../LawnApp.h"
 #include "../LawnCommon.h"
@@ -26,10 +5,9 @@
 #include "../../Resources.h"
 #include "../../GameConstants.h"
 #include "../System/PlayerInfo.h"
-#include "widget/WidgetManager.h"
-#include <algorithm>
+#include "../../SexyAppFramework/WidgetManager.h"
 
-CheatDialog::CheatDialog(LawnApp* theApp) : LawnDialog(theApp, Dialogs::DIALOG_CHEAT, true, "CHEAT", "Enter New Level:", "", Dialog::BUTTONS_OK_CANCEL)
+CheatDialog::CheatDialog(LawnApp* theApp) : LawnDialog(theApp, Dialogs::DIALOG_CHEAT, true, _S("CHEAT"), _S("Enter New Level:"), _S(""), Dialog::BUTTONS_OK_CANCEL)
 {
 	mApp = theApp;
 	mVerticalCenterText = false;
@@ -37,18 +15,18 @@ CheatDialog::CheatDialog(LawnApp* theApp) : LawnDialog(theApp, Dialogs::DIALOG_C
 	mLevelEditWidget->mMaxChars = 12;
 	mLevelEditWidget->AddWidthCheckFont(FONT_BRIANNETOD12, 220);
 
-	std::string aCheatStr;
+	SexyString aCheatStr;
 	if (mApp->mGameMode != GameMode::GAMEMODE_ADVENTURE)
 	{
-		aCheatStr = StrFormat("C%d", static_cast<int>(mApp->mGameMode));
+		aCheatStr = StrFormat(_S("C%d"), (int)mApp->mGameMode);
 	}
 	else if (mApp->HasFinishedAdventure())
 	{
-		aCheatStr = StrFormat("F%s", mApp->GetStageString(mApp->mPlayerInfo->GetLevel()).c_str());
+		aCheatStr = StrFormat(_S("F%s"), mApp->GetStageString(mApp->mPlayerInfo->mLevel).c_str());
 	}
 	else
 	{
-		aCheatStr = mApp->GetStageString(mApp->mPlayerInfo->GetLevel());
+		aCheatStr = mApp->GetStageString(mApp->mPlayerInfo->mLevel);
 	}
 	mLevelEditWidget->SetText(aCheatStr, true);
 
@@ -90,65 +68,63 @@ void CheatDialog::Draw(Graphics* g)
 	DrawEditBox(g, mLevelEditWidget);
 }
 
-void CheatDialog::EditWidgetText(int theId, const std::string& theString)
+void CheatDialog::EditWidgetText(int theId, const SexyString& theString)
 {
-	(void)theId;(void)theString;
 	mApp->ButtonDepress(mId + 2000);
 }
 
-bool CheatDialog::AllowChar(int theId, char theChar)
+bool CheatDialog::AllowChar(int theId, SexyChar theChar)
 {
-	(void)theId;
-	return isdigit(theChar) || theChar == '-' || theChar == 'c' || theChar == 'C' || theChar == 'f' || theChar == 'F';
+	return isdigit(theChar) || theChar == _S('-') || theChar == _S('c') || theChar == _S('C') || theChar == _S('f') || theChar == _S('F');
 }
 
 bool CheatDialog::ApplyCheat()
 {
 	int aChallengeIndex;
-	if (sscanf(mLevelEditWidget->mString.c_str(), "c%d", &aChallengeIndex) == 1 ||
-		sscanf(mLevelEditWidget->mString.c_str(), "C%d", &aChallengeIndex) == 1)
+	if (sexysscanf(mLevelEditWidget->mString.c_str(), _S("c%d"), &aChallengeIndex) == 1 || 
+		sexysscanf(mLevelEditWidget->mString.c_str(), _S("C%d"), &aChallengeIndex) == 1)
 	{
-		mApp->mGameMode = (GameMode)std::clamp(aChallengeIndex, 0, NUM_CHALLENGE_MODES);
+		mApp->mGameMode = (GameMode)ClampInt(aChallengeIndex, 0, NUM_CHALLENGE_MODES);
 		return true;
 	}
 
 	int aLevel = -1;
 	int aFinishedAdventure = 0;
 	int aArea, aSubArea;
-	if (sscanf(mLevelEditWidget->mString.c_str(), "f%d-%d", &aArea, &aSubArea) == 2 ||
-		sscanf(mLevelEditWidget->mString.c_str(), "F%d-%d", &aArea, &aSubArea) == 2)
+	if (sexysscanf(mLevelEditWidget->mString.c_str(), _S("f%d-%d"), &aArea, &aSubArea) == 2 ||
+		sexysscanf(mLevelEditWidget->mString.c_str(), _S("F%d-%d"), &aArea, &aSubArea) == 2)
 	{
 		aLevel = (aArea - 1) * LEVELS_PER_AREA + aSubArea;
 		aFinishedAdventure = 1;
 	}
-	else if (sscanf(mLevelEditWidget->mString.c_str(), "f%d", &aLevel) == 1 || sscanf(mLevelEditWidget->mString.c_str(), "F%d", &aLevel) == 1)
+	else if (sexysscanf(mLevelEditWidget->mString.c_str(), _S("f%d"), &aLevel) == 1 || sexysscanf(mLevelEditWidget->mString.c_str(), _S("F%d"), &aLevel) == 1)
 	{
 		aFinishedAdventure = 1;
 	}
-	else if (sscanf(mLevelEditWidget->mString.c_str(), "%d-%d", &aArea, &aSubArea) == 2)
+	else if (sexysscanf(mLevelEditWidget->mString.c_str(), _S("%d-%d"), &aArea, &aSubArea) == 2)
 	{
 		aLevel = (aArea - 1) * LEVELS_PER_AREA + aSubArea;
 	}
 	else
 	{
-		sscanf(mLevelEditWidget->mString.c_str(), "%d", &aLevel);
+		sexysscanf(mLevelEditWidget->mString.c_str(), _S("%d"), &aLevel);
 	}
 
 	if (aLevel <= 0)
 	{
 		mApp->DoDialog(
-			Dialogs::DIALOG_CHEATERROR,
-			true,
-			"Enter Level",
-			"Invalid Level. Do 'number' or 'area-subarea' or 'Cnumber' or 'Farea-subarea'.",
-			"[DIALOG_BUTTON_OK]",
+			Dialogs::DIALOG_CHEATERROR, 
+			true, 
+			_S("Enter Level"), 
+			_S("Invalid Level. Do 'number' or 'area-subarea' or 'Cnumber' or 'Farea-subarea'."), 
+			_S("OK"), 
 			Dialog::BUTTONS_FOOTER
 		);
 		return false;
 	}
 
 	mApp->mGameMode = GameMode::GAMEMODE_ADVENTURE;
-	mApp->mPlayerInfo->SetLevel(aLevel);
+	mApp->mPlayerInfo->mLevel = aLevel;
 	mApp->mPlayerInfo->mFinishedAdventure = aFinishedAdventure;
 	mApp->WriteCurrentUserConfig();
 	return true;
