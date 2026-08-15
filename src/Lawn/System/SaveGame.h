@@ -1,31 +1,57 @@
-/*
- * Copyright (C) 2026 Zhou Qiankang <wszqkzqk@qq.com>
- *
- * SPDX-License-Identifier: LGPL-3.0-or-later
- *
- * This file is part of PvZ-Portable.
- *
- * PvZ-Portable is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * PvZ-Portable is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with PvZ-Portable. If not, see <https://www.gnu.org/licenses/>.
- */
-
 #ifndef __SAVEGAMECONTEXT_H__
 #define __SAVEGAMECONTEXT_H__
 
 #include <string>
+#include "../../Sexy.TodLib/TodList.h"
+#include "../../SexyAppFramework/Buffer.h"
 
 class Board;
+class Trail;
+enum GameMode;
+class Reanimation;
+class TodParticleSystem;
+class TodParticleEmitter;
+class ReanimatorDefinition;
+class TodParticleDefinition;
+class TrailDefinition;
+namespace Sexy
+{
+    class Image;
+}
+using namespace Sexy;
 
+struct SaveFileHeader
+{
+    unsigned int    mMagicNumber;
+    unsigned int    mBuildVersion;
+    unsigned int    mBuildDate;
+};
+
+class SaveGameContext
+{
+public:
+    Buffer          mBuffer;            
+    bool            mFailed;            
+    bool            mReading;           
+
+public:
+    inline int      ByteLeftToRead() { return (mBuffer.mDataBitSize - mBuffer.mReadBitPos + 7) / 8; }
+    void            SyncBytes(void* theDest, int theReadSize);
+    void            SyncInt(int& theInt);
+    inline void     SyncUint(unsigned int& theInt) { SyncInt((signed int&)theInt); }
+    void            SyncReanimationDef(ReanimatorDefinition*& theDefinition);
+    void            SyncParticleDef(TodParticleDefinition*& theDefinition);
+    void            SyncTrailDef(TrailDefinition*& theDefinition);
+    void            SyncImage(Image*& theImage);
+};
+
+void                SyncDataIDList(TodList<unsigned int>* theDataIDList, SaveGameContext& theContext, TodAllocator* theAllocator);
+void                SyncParticleEmitter(TodParticleSystem* theParticleSystem, TodParticleEmitter* theParticleEmitter, SaveGameContext& theContext);
+void                SyncParticleSystem(Board* theBoard, TodParticleSystem* theParticleSystem, SaveGameContext& theContext);
+void                SyncReanimation(Board* theBoard, Reanimation* theReanimation, SaveGameContext& theContext);
+void                SyncTrail(Board* theBoard, Trail* theTrail, SaveGameContext& theContext);
+void                SyncBoard(SaveGameContext& theContext, Board* theBoard);
+void				FixBoardAfterLoad(Board* theBoard);
 bool				LawnLoadGame(Board* theBoard, const std::string& theFilePath);
 bool				LawnSaveGame(Board* theBoard, const std::string& theFilePath);
 

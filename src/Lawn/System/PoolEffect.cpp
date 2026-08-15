@@ -1,263 +1,286 @@
-/*
- * Copyright (C) 2026 Zhou Qiankang <wszqkzqk@qq.com>
- *
- * SPDX-License-Identifier: LGPL-3.0-or-later
- *
- * This file is part of PvZ-Portable.
- *
- * PvZ-Portable is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * PvZ-Portable is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with PvZ-Portable. If not, see <https://www.gnu.org/licenses/>.
- */
-
-#include <memory>
 #include "PoolEffect.h"
+#include "../Board.h"
 #include "../../LawnApp.h"
 #include "../../Resources.h"
 #include "../../GameConstants.h"
-#include "../../PvzpLib/PvzpDebug.h"
-#include "graphics/GLImage.h"
-#include "graphics/Graphics.h"
-#include "graphics/GLInterface.h"
-
-constexpr const int CAUSTIC_IMAGE_WIDTH = 128;
-constexpr const int CAUSTIC_IMAGE_HEIGHT = 64;
-
-//effect documentation by @windowslover1234
+#include "../../Sexy.TodLib/TodDebug.h"
+#include "../../SexyAppFramework/DDImage.h"
+#include "../../SexyAppFramework/Graphics.h"
+#include "../../SexyAppFramework/DDInterface.h"
+#include "../../SexyAppFramework/D3DInterface.h"
 
 void PoolEffect::PoolEffectInitialize()
 {
-	//load pool caustics into memory
-	PvzpHesitationBracket aHesitation("PoolEffectInitialize");
+    TodHesitationBracket aHesitation("PoolEffectInitialize");
 
-	mApp = gLawnApp;
-	mPoolCounter = 0;
+    mApp = gLawnApp;
 
-	mCausticImage = std::make_unique<MemoryImage>(gSexyAppBase);
-	mCausticImage->mWidth = CAUSTIC_IMAGE_WIDTH;
-	mCausticImage->mHeight = CAUSTIC_IMAGE_HEIGHT;
-	mCausticImage->mBits = new uint32_t[CAUSTIC_IMAGE_WIDTH * CAUSTIC_IMAGE_HEIGHT + 1];
-	mCausticImage->mHasTrans = true;
-	mCausticImage->mHasAlpha = true;
-	mCausticImage->mRenderFlags |= RenderImageFlag_Repeat;
-	memset(mCausticImage->mBits, 0xFF, CAUSTIC_IMAGE_WIDTH * CAUSTIC_IMAGE_HEIGHT * 4); //4
-	mCausticImage->mBits[CAUSTIC_IMAGE_WIDTH * CAUSTIC_IMAGE_HEIGHT] = MEMORYCHECK_ID;
+    mCausticImage = new MemoryImage(gSexyAppBase);
+    mCausticImage->mWidth = CAUSTIC_IMAGE_WIDTH;
+    mCausticImage->mHeight = CAUSTIC_IMAGE_HEIGHT;
+    mCausticImage->mBits = new unsigned long[CAUSTIC_IMAGE_WIDTH * CAUSTIC_IMAGE_HEIGHT + 1];
+    mCausticImage->mHasTrans = true;
+    mCausticImage->mHasAlpha = true;
+    memset(mCausticImage->mBits, 0xFF, CAUSTIC_IMAGE_WIDTH * CAUSTIC_IMAGE_HEIGHT * 4);
+    mCausticImage->mBits[CAUSTIC_IMAGE_WIDTH * CAUSTIC_IMAGE_HEIGHT] = MEMORYCHECK_ID;
 
-	mCausticGrayscaleImage.resize(256 * 256);
-	MemoryImage* aCausticGrayscaleImage = reinterpret_cast<MemoryImage*>(IMAGE_POOL_CAUSTIC_EFFECT);
-	int index = 0;
-	for (int x = 0; x < 256; x++)
-	{
-		for (int y = 0; y < 256; y++)
-		{
-			mCausticGrayscaleImage[index] = static_cast<unsigned char>(aCausticGrayscaleImage->mBits[index]);
-			index++;
-		}
-	}
+    mCausticGrayscaleImage = new unsigned char[256 * 256];
+    MemoryImage* aCausticGrayscaleImage = (MemoryImage*)IMAGE_POOL_CAUSTIC_EFFECT;
+    int index = 0;
+    for (int x = 0; x < 256; x++)
+    {
+        for (int y = 0; y < 256; y++)
+        {
+            mCausticGrayscaleImage[index] = (unsigned char)aCausticGrayscaleImage->mBits[index];
+            index++;
+        }
+    }
+}
+
+void PoolEffect::PoolEffectDispose()
+{
+    delete mCausticImage;
+    delete[] mCausticGrayscaleImage;
 }
 
 unsigned int PoolEffect::BilinearLookupFixedPoint(unsigned int u, unsigned int v)
 {
-	unsigned int timeU = u & 0xFFFF0000;
-	unsigned int timeV = v & 0xFFFF0000;
-	unsigned int factorU1 = ((u - timeU) & 0x0000FFFE) + 1;
-	unsigned int factorV1 = ((v - timeV) & 0x0000FFFE) + 1;
-	unsigned int factorU0 = 65536 - factorU1;
-	unsigned int factorV0 = 65536 - factorV1;
-	unsigned int indexU0 = (timeU >> 16) % 256;
-	unsigned int indexU1 = ((timeU >> 16) + 1) % 256;
-	unsigned int indexV0 = (timeV >> 16) % 256;
-	unsigned int indexV1 = ((timeV >> 16) + 1) % 256;
+    unsigned int timeU = u & 0xFFFF0000;
+    unsigned int timeV = v & 0xFFFF0000;
+    unsigned int factorU1 = ((u - timeU) & 0x0000FFFE) + 1;
+    unsigned int factorV1 = ((v - timeV) & 0x0000FFFE) + 1;
+    unsigned int factorU0 = 65536 - factorU1;
+    unsigned int factorV0 = 65536 - factorV1;
+    unsigned int indexU0 = (timeU >> 16) % 256;
+    unsigned int indexU1 = ((timeU >> 16) + 1) % 256;
+    unsigned int indexV0 = (timeV >> 16) % 256;
+    unsigned int indexV1 = ((timeV >> 16) + 1) % 256;
 
-	return
-		((((factorU0 * factorV1) / 65536) * mCausticGrayscaleImage[indexV1 * 256 + indexU0]) / 65536) +
-		((((factorU1 * factorV1) / 65536) * mCausticGrayscaleImage[indexV1 * 256 + indexU1]) / 65536) +
-		((((factorU0 * factorV0) / 65536) * mCausticGrayscaleImage[indexV0 * 256 + indexU0]) / 65536) +
-		((((factorU1 * factorV0) / 65536) * mCausticGrayscaleImage[indexV0 * 256 + indexU1]) / 65536);
+    return
+        ((((factorU0 * factorV1) / 65536) * mCausticGrayscaleImage[indexV1 * 256 + indexU0]) / 65536) +
+        ((((factorU1 * factorV1) / 65536) * mCausticGrayscaleImage[indexV1 * 256 + indexU1]) / 65536) +
+        ((((factorU0 * factorV0) / 65536) * mCausticGrayscaleImage[indexV0 * 256 + indexU0]) / 65536) +
+        ((((factorU1 * factorV0) / 65536) * mCausticGrayscaleImage[indexV0 * 256 + indexU1]) / 65536);
 }
 
-void PoolEffect::UpdateWaterEffect()
+void PoolEffect::UpdateWaterEffect(Sexy::Graphics* g)
 {
-	int idx = 0;
-	for (int y = 0; y < CAUSTIC_IMAGE_HEIGHT; y++)
-	{
-		unsigned int timeV1 = (256 - y) << 17;
-		unsigned int timeV0 = y << 17;
+    int idx = 0;
+    for (int y = 0; y < CAUSTIC_IMAGE_HEIGHT; y++)
+    {
+        int timeV1 = (256 - y) << 17;
+        int timeV0 = y << 17;
 
-		for (int x = 0; x < CAUSTIC_IMAGE_WIDTH; x++)
-		{
-			uint32_t* pix = &mCausticImage->mBits[idx];
+        for (int x = 0; x < CAUSTIC_IMAGE_WIDTH; x++)
+        {
+            unsigned long* pix = &mCausticImage->mBits[idx];
 
-			unsigned int timeU = x << 17;
-			unsigned int timePool0 = mPoolCounter << 16;
-			unsigned int timePool1 = ((mPoolCounter & 65535u) + 1u) << 16;
-			int a1 = static_cast<unsigned char>(BilinearLookupFixedPoint(timeU - timePool1 / 6, timeV1 + timePool0 / 8)); //scroll speed
-			int a0 = static_cast<unsigned char>(BilinearLookupFixedPoint(timeU + timePool0 / 10, timeV0)); //scroll speed
-			unsigned char a = static_cast<unsigned char>((a0 + a1) / 2);
+            int timeU = x << 17;
+            int timePool0 = mPoolCounter << 16;
+            int timePool1 = ((mPoolCounter & 65535) + 1) << 16;
+            int a1 = (unsigned char)BilinearLookupFixedPoint(timeU - timePool1 / 6, timeV1 + timePool0 / 8);
+            int a0 = (unsigned char)BilinearLookupFixedPoint(timeU + timePool0 / 10, timeV0);
+            unsigned char a = (unsigned char)((a0 + a1) / 2);
 
-			unsigned char alpha;
-			if (a >= 160U)
-			{
-				alpha = 255 - 2 * (a - 160U);
-			}
-			else if (a >= 128U)
-			{
-				alpha = 5 * (a - 128U);
-			}
-			else
-			{
-				alpha = 0;
-			}
+            unsigned char alpha;
+            if (a >= 160U)
+            {
+                alpha = 255 - 2 * (a - 160U);
+            }
+            else if (a >= 128U)
+            {
+                alpha = 5 * (a - 128U);
+            }
+            else
+            {
+                alpha = 0;
+            }
 
-			*pix = (*pix & 0x00FFFFFF) + ((static_cast<int>(alpha) / 3) << 24); //alpha of caustic effect
-			idx++;
-		}
-	}
+            *pix = (*pix & 0x00FFFFFF) + (((int)alpha / 3) << 24);
+            idx++;
+        }
+    }
 
-	++mCausticImage->mBitsChangedCount;
+    ++mCausticImage->mBitsChangedCount;
 }
 
 void PoolEffect::PoolEffectDraw(Sexy::Graphics* g, bool theIsNight)
 {
-	if (!mApp->Is3DAccelerated())
-	{
-		//skip if using software rendering, never true in this port
-		if (theIsNight)
-		{
-			g->DrawImage(IMAGE_POOL_NIGHT, 34, 278);
-		}
-		else
-		{
-			g->DrawImage(IMAGE_POOL, 34, 278);
-		}
-		return;
-	}
-	//pool background
-	float aGridSquareX = IMAGE_POOL->GetWidth() / 15.0f;
-	float aGridSquareY = IMAGE_POOL->GetHeight() / 5.0f;
-	float aOffsetArray[3][16][6][2] = {{{{ 0 }}}};
-	for (int x = 0; x <= 15; x++)
-	{
-		for (int y = 0; y <= 5; y++) //handles the caustic effect
-		{
-			aOffsetArray[2][x][y][0] = x / 15.0f;
-			aOffsetArray[2][x][y][1] = y / 5.0f;
-			if (x != 0 && x != 15 && y != 0 && y != 5)
-			{
-				constexpr unsigned int POOL_PHASE_PERIOD = 316800u; // LCM of all sin wave effective periods (1600, 300, 1800, 220, 3200/3, 200, 720, 640, 88)
-				float aPoolPhase = (mPoolCounter % POOL_PHASE_PERIOD) * PI; //speed, * 2 is default
-				float aWaveTime1 = aPoolPhase / 800.0;
-				float aWaveTime2 = aPoolPhase / 150.0;
-				float aWaveTime3 = aPoolPhase / 900.0;
-				float aWaveTime4 = aPoolPhase / 800.0;
-				float aWaveTime5 = aPoolPhase / 110.0;
-				float xPhase = x * 3.0f * 2 * PI / 15.0f; //15.0f
-				float yPhase = y * 3.0f * 2 * PI / 5.0f; //more speed options, 5.0f
-				//verticies for rendering, dividing by 1 gives interesting results
-				aOffsetArray[0][x][y][0] = sin(yPhase + aWaveTime2) * 0.002f + sin(yPhase + aWaveTime1) * 0.005f;
-				aOffsetArray[0][x][y][1] = sin(xPhase + aWaveTime5) * 0.01f + sin(xPhase + aWaveTime3) * 0.015f + sin(xPhase + aWaveTime4) * 0.005f;
-				aOffsetArray[1][x][y][0] = sin(yPhase * 0.2f + aWaveTime2) * 0.015f + sin(yPhase * 0.2f + aWaveTime1) * 0.012f;
-				aOffsetArray[1][x][y][1] = sin(xPhase * 0.2f + aWaveTime5) * 0.005f + sin(xPhase * 0.2f + aWaveTime3) * 0.015f + sin(xPhase * 0.2f + aWaveTime4) * 0.02f;
-				aOffsetArray[2][x][y][0] += sin(yPhase + aWaveTime1 * 1.5f) * 0.004f + sin(yPhase + aWaveTime2 * 1.5f) * 0.005f;
-				aOffsetArray[2][x][y][1] += sin(xPhase * 4.0f + aWaveTime5 * 2.5f) * 0.005f + sin(xPhase * 2.0f + aWaveTime3 * 2.5f) * 0.04f + sin(xPhase * 3.0f + aWaveTime4 * 2.5f) * 0.02f;
-			}
-			else
-			{
-				//skip animation
-				aOffsetArray[0][x][y][0] = 0.0f;
-				aOffsetArray[0][x][y][1] = 0.0f;
-				aOffsetArray[1][x][y][0] = 0.0f;
-				aOffsetArray[1][x][y][1] = 0.0f;
-			}
-		}
-	}
+    int alphaNight = 0;
+    if (mApp && mApp->mBoard)
+    {
+        Board* aBoard = mApp->mBoard;
+        bool isEclipseLevel = (mApp->IsAdventureMode() && aBoard->mLevel >= 51 && aBoard->mLevel <= 59 && aBoard->mLevel != 57 && aBoard->mLevel != 55);
 
-	int aIndexOffsetX[6] = { 0, 0, 1, 0, 1, 1 };
-	int aIndexOffsetY[6] = { 0, 1, 1, 0, 1, 0 };
-	TriVertex aVertArray[3][150][3];
+        if (mApp->mGameMode == GameMode::GAMEMODE_CHALLENGE_DYNAMIC_ROOF)
+        {
+            alphaNight = 255 - (int)aBoard->mRoofTransitionAlpha;
+        }
+        else if (!isEclipseLevel)
+        {
+            if (aBoard->mStartsAsDay)
+            {
+                alphaNight = (int)aBoard->mGlobalTimeAlpha;
+            }
+            else
+            {
+                alphaNight = 255 - (int)aBoard->mGlobalTimeAlpha;
+            }
+        }
+        else
+        {
+            alphaNight = aBoard->StageIsNight() ? 255 : 0;
+        }
+    }
+    else
+    {
+        alphaNight = theIsNight ? 255 : 0;
+    }
 
-	for (int x = 0; x < 15; x++)
-	{
-		for (int y = 0; y < 5; y++)
-		{
-			for (int aLayer = 0; aLayer < 3; aLayer++)
-			{
-				TriVertex* pVert = &aVertArray[aLayer][x * 10 + y * 2][0];
-				for (int aVertIndex = 0; aVertIndex < 6; aVertIndex++, pVert++)
-				{
-					int aIndexX = x + aIndexOffsetX[aVertIndex];
-					int aIndexY = y + aIndexOffsetY[aVertIndex];
-					if (aLayer == 2) //caustic effect
-					{
-						pVert->x = (704.0f / 15.0f) * aIndexX + 45.0f; //x-offset
-						pVert->y = 30.0f * aIndexY + 288.0f; //y-offset
-						pVert->u = aOffsetArray[2][aIndexX][aIndexY][0] + aIndexX / 15.0f;
-						pVert->v = aOffsetArray[2][aIndexX][aIndexY][1] + aIndexY / 5.0f;
-						//use correct colors depending on the scene
-						if (!g->mClipRect.Contains(pVert->x, pVert->y))
-						{
-							pVert->color = 0x00FFFFFFUL;
-						}
-						else if (aIndexX == 0 || aIndexX == 15 || aIndexY == 0)
-						{
-							pVert->color = 0x20FFFFFFUL;
-						}
-						else if (theIsNight)
-						{
-							pVert->color = 0x30FFFFFFUL;
-						}
-						else
-						{
-							pVert->color = aIndexX <= 7 ? 0xC0FFFFFFUL : 0x80FFFFFFUL;
-						}
-					}
-					else
-					{
-						//update water outlines
-						pVert->color = 0xFFFFFFFFUL;
-						pVert->x = aIndexX * aGridSquareX + 35.0f;
-						pVert->y = aIndexY * aGridSquareY + 279.0f;
-						pVert->u = aOffsetArray[aLayer][aIndexX][aIndexY][0] + aIndexX / 15.0f;
-						pVert->v = aOffsetArray[aLayer][aIndexX][aIndexY][1] + aIndexY / 5.0f;
-						if (!g->mClipRect.Contains(pVert->x, pVert->y))
-						{
-							pVert->color = 0x00FFFFFFUL;
-						}
-					}
-				}
-			}
-		}
-	}
-	//draw correct shading type depending on area.
-	if (theIsNight)
-	{
-		g->DrawTrianglesTex(IMAGE_POOL_BASE_NIGHT, aVertArray[0], 150);
-		g->DrawTrianglesTex(IMAGE_POOL_SHADING_NIGHT, aVertArray[1], 150);
-	}
-	else
-	{
-		g->DrawTrianglesTex(IMAGE_POOL_BASE, aVertArray[0], 150);
-		g->DrawTrianglesTex(IMAGE_POOL_SHADING, aVertArray[1], 150);
-	}
-	//update positions
-	UpdateWaterEffect();
-	//send something to OpenGL
-	GLInterface* anInterface = ((GLImage*)g->mDestImage)->mGLInterface;
+    if (alphaNight > 255) alphaNight = 255;
+    if (alphaNight < 0) alphaNight = 0;
 
-	//Send caustic effect tris to OpenGL (tex, verts, tris)
-	g->DrawTrianglesTex(mCausticImage.get(), aVertArray[2], 150);
+    if (!mApp->Is3DAccelerated())
+    {
+        if (alphaNight < 255)
+        {
+            g->DrawImage(IMAGE_POOL, 34, 278);
+        }
+        if (alphaNight > 0)
+        {
+            g->SetColorizeImages(true);
+            g->SetColor(Color(255, 255, 255, alphaNight));
+            g->DrawImage(IMAGE_POOL_NIGHT, 34, 278);
+            g->SetColorizeImages(false);
+        }
+        return;
+    }
+
+    float aGridSquareX = IMAGE_POOL->GetWidth() / 15.0f;
+    float aGridSquareY = IMAGE_POOL->GetHeight() / 5.0f;
+    float aOffsetArray[3][16][6][2] = { 0 };
+    for (int x = 0; x <= 15; x++)
+    {
+        for (int y = 0; y <= 5; y++)
+        {
+            aOffsetArray[2][x][y][0] = x / 15.0f;
+            aOffsetArray[2][x][y][1] = y / 5.0f;
+            if (x != 0 && x != 15 && y != 0 && y != 5)
+            {
+                float aPoolPhase = mPoolCounter * 2 * PI;
+                float aWaveTime1 = aPoolPhase / 800.0;
+                float aWaveTime2 = aPoolPhase / 150.0;
+                float aWaveTime3 = aPoolPhase / 900.0;
+                float aWaveTime4 = aPoolPhase / 800.0;
+                float aWaveTime5 = aPoolPhase / 110.0;
+                float xPhase = x * 3.0f * 2 * PI / 15.0f;
+                float yPhase = y * 3.0f * 2 * PI / 5.0f;
+
+                aOffsetArray[0][x][y][0] = sin(yPhase + aWaveTime2) * 0.002f + sin(yPhase + aWaveTime1) * 0.005f;
+                aOffsetArray[0][x][y][1] = sin(xPhase + aWaveTime5) * 0.01f + sin(xPhase + aWaveTime3) * 0.015f + sin(xPhase + aWaveTime4) * 0.005f;
+                aOffsetArray[1][x][y][0] = sin(yPhase * 0.2f + aWaveTime2) * 0.015f + sin(yPhase * 0.2f + aWaveTime1) * 0.012f;
+                aOffsetArray[1][x][y][1] = sin(xPhase * 0.2f + aWaveTime5) * 0.005f + sin(xPhase * 0.2f + aWaveTime3) * 0.015f + sin(xPhase * 0.2f + aWaveTime4) * 0.02f;
+                aOffsetArray[2][x][y][0] += sin(yPhase + aWaveTime1 * 1.5f) * 0.004f + sin(yPhase + aWaveTime2 * 1.5f) * 0.005f;
+                aOffsetArray[2][x][y][1] += sin(xPhase * 4.0f + aWaveTime5 * 2.5f) * 0.005f + sin(xPhase * 2.0f + aWaveTime3 * 2.5f) * 0.04f + sin(xPhase * 3.0f + aWaveTime4 * 2.5f) * 0.02f;
+            }
+            else
+            {
+                aOffsetArray[0][x][y][0] = 0.0f;
+                aOffsetArray[0][x][y][1] = 0.0f;
+                aOffsetArray[1][x][y][0] = 0.0f;
+                aOffsetArray[1][x][y][1] = 0.0f;
+            }
+        }
+    }
+
+    int aIndexOffsetX[6] = { 0, 0, 1, 0, 1, 1 };
+    int aIndexOffsetY[6] = { 0, 1, 1, 0, 1, 0 };
+    TriVertex aVertArray[3][150][3];
+
+    for (int x = 0; x < 15; x++)
+    {
+        for (int y = 0; y < 5; y++)
+        {
+            for (int aLayer = 0; aLayer < 3; aLayer++)
+            {
+                TriVertex* pVert = &aVertArray[aLayer][x * 10 + y * 2][0];
+                for (int aVertIndex = 0; aVertIndex < 6; aVertIndex++, pVert++)
+                {
+                    int aIndexX = x + aIndexOffsetX[aVertIndex];
+                    int aIndexY = y + aIndexOffsetY[aVertIndex];
+                    if (aLayer == 2)
+                    {
+                        pVert->x = (704.0f / 15.0f) * aIndexX + 45.0f;
+                        pVert->y = 30.0f * aIndexY + 288.0f;
+                        pVert->u = aOffsetArray[2][aIndexX][aIndexY][0] + aIndexX / 15.0f;
+                        pVert->v = aOffsetArray[2][aIndexX][aIndexY][1] + aIndexY / 5.0f;
+
+                        if (!g->mClipRect.Contains(pVert->x, pVert->y))
+                        {
+                            pVert->color = 0x00FFFFFFUL;
+                        }
+                        else if (aIndexX == 0 || aIndexX == 15 || aIndexY == 0)
+                        {
+                            pVert->color = 0x20FFFFFFUL;
+                        }
+                        else
+                        {
+                            int dayA = aIndexX <= 7 ? 0xC0 : 0x80;
+                            int nightA = 0x30;
+                            int causticAlpha = dayA + ((nightA - dayA) * alphaNight) / 255;
+                            pVert->color = (causticAlpha << 24) | 0x00FFFFFFUL;
+                        }
+                    }
+                    else
+                    {
+                        pVert->color = 0xFFFFFFFFUL;
+                        pVert->x = aIndexX * aGridSquareX + 35.0f;
+                        pVert->y = aIndexY * aGridSquareY + 279.0f;
+                        pVert->u = aOffsetArray[aLayer][aIndexX][aIndexY][0] + aIndexX / 15.0f;
+                        pVert->v = aOffsetArray[aLayer][aIndexX][aIndexY][1] + aIndexY / 5.0f;
+                        if (!g->mClipRect.Contains(pVert->x, pVert->y))
+                        {
+                            pVert->color = 0x00FFFFFFUL;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (alphaNight < 255)
+    {
+        g->DrawTrianglesTex(IMAGE_POOL_BASE, aVertArray[0], 150);
+        g->DrawTrianglesTex(IMAGE_POOL_SHADING, aVertArray[1], 150);
+    }
+
+    if (alphaNight > 0)
+    {
+        unsigned long nightColorMask = ((unsigned long)alphaNight << 24) | 0x00FFFFFFUL;
+        for (int i = 0; i < 150; i++)
+        {
+            for (int j = 0; j < 3; j++)
+            {
+                if (aVertArray[0][i][j].color != 0x00FFFFFFUL)
+                    aVertArray[0][i][j].color = nightColorMask;
+                if (aVertArray[1][i][j].color != 0x00FFFFFFUL)
+                    aVertArray[1][i][j].color = nightColorMask;
+            }
+        }
+        g->DrawTrianglesTex(IMAGE_POOL_BASE_NIGHT, aVertArray[0], 150);
+        g->DrawTrianglesTex(IMAGE_POOL_SHADING_NIGHT, aVertArray[1], 150);
+    }
+
+    UpdateWaterEffect(g);
+    D3DInterface* anInterface = ((DDImage*)g->mDestImage)->mDDInterface->mD3DInterface;
+    anInterface->CheckDXError(anInterface->mD3DDevice->SetTextureStageState(0, D3DTEXTURESTAGESTATETYPE::D3DTSS_ADDRESSU, D3DTEXTUREADDRESS::D3DTADDRESS_WRAP), "DrawPool");
+    anInterface->CheckDXError(anInterface->mD3DDevice->SetTextureStageState(0, D3DTEXTURESTAGESTATETYPE::D3DTSS_ADDRESSV, D3DTEXTUREADDRESS::D3DTADDRESS_WRAP), "DrawPool");
+    g->DrawTrianglesTex(mCausticImage, aVertArray[2], 150);
+    anInterface->CheckDXError(anInterface->mD3DDevice->SetTextureStageState(0, D3DTEXTURESTAGESTATETYPE::D3DTSS_ADDRESSU, D3DTEXTUREADDRESS::D3DTADDRESS_CLAMP), "DrawPool");
+    anInterface->CheckDXError(anInterface->mD3DDevice->SetTextureStageState(0, D3DTEXTURESTAGESTATETYPE::D3DTSS_ADDRESSV, D3DTEXTUREADDRESS::D3DTADDRESS_CLAMP), "DrawPool");
 }
 
 void PoolEffect::PoolEffectUpdate()
 {
-	++mPoolCounter;
+    ++mPoolCounter;
 }

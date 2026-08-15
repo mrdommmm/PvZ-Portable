@@ -1,58 +1,33 @@
-/*
- * Copyright (C) 2026 Zhou Qiankang <wszqkzqk@qq.com>
- *
- * SPDX-License-Identifier: LGPL-3.0-or-later
- *
- * This file is part of PvZ-Portable.
- *
- * PvZ-Portable is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * PvZ-Portable is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with PvZ-Portable. If not, see <https://www.gnu.org/licenses/>.
- */
-
 #ifndef __DATASYNC_H__
 #define __DATASYNC_H__
 
-#include <type_traits>
 #include "../../SexyAppFramework/Common.h"
 
 class DataReader
 {
 protected:
-	FILE*					mFile;
-	char*					mData;
-	uint32_t				mDataLen;
-	uint32_t				mDataPos;
-	bool					mOwnData;
+	FILE*					mFile;			
+	char*					mData;			
+	unsigned long			mDataLen;		
+	unsigned long			mDataPos;		
+	bool					mOwnData;		
 
 public:
 	DataReader();
-	DataReader(const DataReader& theDataReader) = delete;
-	DataReader& operator=(const DataReader& theDataReader) = delete;
 	virtual ~DataReader();
 
 	bool					OpenFile(const std::string& theFileName);
-	void					OpenMemory(const void* theData, uint32_t theDataLen, bool takeOwnership);
+	void					OpenMemory(const void* theData, unsigned long theDataLen, bool takeOwnership);
 	void					Close();
-	void					ReadBytes(void* theMem, uint32_t theNumBytes);
-	void					Rewind(uint32_t theNumBytes);
-	uint64_t				ReadUInt64();
-	uint32_t				ReadUInt32();
-	uint16_t				ReadUInt16();
-	uint8_t					ReadUInt8();
+	void					ReadBytes(void* theMem, unsigned long theNumBytes);
+	void					Rewind(unsigned long theNumBytes);
+	unsigned long			ReadLong();
+	unsigned short			ReadShort();
+	unsigned char			ReadByte();
 	bool					ReadBool();
 	float					ReadFloat();
 	double					ReadDouble();
-	void					ReadString(std::string& theStr);
+	void					ReadString(SexyString& theStr);
 };
 class DataReaderException : public std::exception
 {
@@ -61,32 +36,40 @@ class DataReaderException : public std::exception
 class DataWriter
 {
 protected:
-	FILE*					mFile;
-	std::vector<char>			mData;
+	FILE*					mFile;			
+	char*					mData;			
+	unsigned long			mDataLen;		
+	unsigned long			mCapacity;		
+
+protected:
+	void					EnsureCapacity(unsigned long theNumBytes);
 
 public:
 	DataWriter();
-	DataWriter(const DataWriter& theDataWriter) = delete;
-	DataWriter& operator=(const DataWriter& theDataWriter) = delete;
 	virtual ~DataWriter();
 
 	bool					OpenFile(const std::string& theFileName);
-	void					OpenMemory(uint32_t theReserveAmount = 0x20);
+	void					OpenMemory(unsigned long theReserveAmount = 0x20);
 	void					Close();
-	inline bool				WriteToFile(const std::string& theFileName);
-	void					WriteBytes(const void* theData, uint32_t theDataLen);
-	void					WriteUInt64(uint64_t theUInt64);
-	void					WriteUInt32(uint32_t theUInt32);
-	void					WriteUInt16(uint16_t theUInt16);
-	void					WriteUInt8(uint8_t theUInt8);
+	inline bool				WriteToFile(const std::string& theFileName) { /* Œ¥’“µΩ */ }
+	void					WriteBytes(const void* theData, unsigned long theDataLen);
+	void					WriteLong(unsigned long theLong);
+	void					WriteShort(unsigned short theShort);
+	void					WriteByte(unsigned char theChar);
 	void					WriteBool(bool theBool);
 	void					WriteFloat(float theFloat);
 	void					WriteDouble(double theDouble);
-	void					WriteString(std::string_view theStr);
-	inline uint32_t			GetPos();
-	inline void*			GetDataPtr() { return mData.data(); }
-	inline uint32_t			GetDataLen() { return static_cast<uint32_t>(mData.size()); }
+	void					WriteString(const SexyString& theStr);
+	inline unsigned long	GetPos() { /* Œ¥’“µΩ */ }
+	inline void				SetLong(unsigned long, unsigned long) { /* Œ¥’“µΩ */ }
+	inline void				SetShort(unsigned int, unsigned long) { /* Œ¥’“µΩ */ }
+	inline void				SetByte(unsigned int, unsigned long) { /* Œ¥’“µΩ */ }
+	inline void*			GetDataPtr() { return mData; }
+	inline int				GetDataLen() { return mDataLen; }
 };
+
+typedef std::map<void*, int> PointerToIntMap;
+typedef std::map<int, void*> IntToPointerMap;
 
 class DataSync
 {
@@ -94,8 +77,13 @@ protected:
 	DataReader*				mReader;
 	DataWriter*				mWriter;
 	int						mVersion;
+	PointerToIntMap			mPointerToIntMap;
+	IntToPointerMap			mIntToPointerMap;
+	std::vector<void**>		mPointerSyncList;
+	int						mCurPointerIndex;
 
 protected:
+	void ResetPointerTable();
 	void Reset();
 
 public:
@@ -103,43 +91,60 @@ public:
 	DataSync(DataWriter& theWriter);
 	virtual ~DataSync();
 
+	inline void				SyncPointers() { /* Œ¥’“µΩ */ }
 	inline void				SetReader(DataReader* theReader) { mReader = theReader; }
 	inline void				SetWriter(DataWriter* theWriter) { mWriter = theWriter; }
 	inline DataReader*		GetReader() { return mReader; }
 	inline DataWriter*		GetWriter() { return mWriter; }
-	void					SyncBytes(void* theData, uint32_t theDataLen);
-	void					SyncUInt64(uint64_t& theNum);
-	void					SyncUInt32(char& theNum);
-	void					SyncUInt32(short& theNum);
-	void					SyncUInt32(long& theNum);
-	void					SyncUInt32(unsigned char& theNum);
-	void					SyncUInt32(unsigned short& theNum);
-	void					SyncUInt32(uint32_t& theNum);
-	void					SyncUInt32(int32_t& theNum);
-	template<typename E, std::enable_if_t<std::is_enum_v<E>, int> = 0>
-	void					SyncUInt32(E& theEnum) { SyncUInt32(reinterpret_cast<std::underlying_type_t<E>&>(theEnum)); }
-	void					SyncUInt16(char& theNum);
-	void					SyncUInt16(short& theNum);
-	void					SyncUInt16(long& theNum);
-	void					SyncUInt16(unsigned char& theNum);
-	void					SyncUInt16(uint16_t& theNum);
-	void					SyncUInt16(uint32_t& theNum);
-	void					SyncUInt16(int32_t& theNum);
-	template<typename E, std::enable_if_t<std::is_enum_v<E>, int> = 0>
-	void					SyncUInt16(E& theEnum) { SyncUInt16(reinterpret_cast<std::underlying_type_t<E>&>(theEnum)); }
-	void					SyncUInt8(uint8_t& theChar);
-	void					SyncUInt8(char& theChar);
-	void					SyncUInt8(short& theChar);
-	void					SyncUInt8(long& theChar);
-	void					SyncUInt8(unsigned short& theChar);
-	void					SyncUInt8(uint32_t& theChar);
-	void					SyncUInt8(int32_t& theChar);
-	template<typename E, std::enable_if_t<std::is_enum_v<E>, int> = 0>
-	void					SyncUInt8(E& theEnum) { SyncUInt8(reinterpret_cast<std::underlying_type_t<E>&>(theEnum)); }
+	void					SyncBytes(void* theData, unsigned long theDataLen);
+	void					SyncLong(char& theNum);
+	void					SyncLong(short& theNum);
+	void					SyncLong(long& theNum);
+	void					SyncLong(unsigned char& theNum);
+	void					SyncLong(unsigned short& theNum);
+	void					SyncLong(unsigned long& theNum);
+	void					SyncLong(int& theNum);
+	void					SyncSLong(char& theNum);
+	void					SyncSLong(short& theNum);
+	void					SyncSLong(long& theNum);
+	void					SyncSLong(unsigned char& theNum);
+	void					SyncSLong(unsigned short& theNum);
+	void					SyncSLong(unsigned long& theNum);
+	void					SyncSLong(int& theNum);
+	void					SyncShort(char& theNum);
+	void					SyncShort(short& theNum);
+	void					SyncShort(long& theNum);
+	void					SyncShort(unsigned char& theNum);
+	void					SyncShort(unsigned short& theNum);
+	void					SyncShort(unsigned long& theNum);
+	void					SyncShort(int& theNum);
+	void					SyncSShort(char& theNum);
+	void					SyncSShort(short& theNum);
+	void					SyncSShort(long& theNum);
+	void					SyncSShort(unsigned char& theNum);
+	void					SyncSShort(unsigned short& theNum);
+	void					SyncSShort(unsigned long& theNum);
+	void					SyncSShort(int& theNum);
+	void					SyncByte(char& theChar);
+	void					SyncByte(short& theChar);
+	void					SyncByte(long& theChar);
+	void					SyncByte(unsigned char& theChar);
+	void					SyncByte(unsigned short& theChar);
+	void					SyncByte(unsigned long& theChar);
+	void					SyncByte(int& theChar);
+	void					SyncSByte(char& theChar);
+	void					SyncSByte(short& theChar);
+	void					SyncSByte(long& theChar);
+	void					SyncSByte(unsigned char& theChar);
+	void					SyncSByte(unsigned short& theChar);
+	void					SyncSByte(unsigned long& theChar);
+	void					SyncSByte(int& theChar);
 	void					SyncBool(bool& theBool);
 	void					SyncFloat(float& theFloat);
 	void					SyncDouble(double& theDouble);
-	void					SyncString(std::string& theStr);
+	void					SyncString(SexyString& theStr);
+	inline void				SyncPointer(void**) { /* Œ¥’“µΩ */ }
+	inline void				RegisterPointer(void*) { /* Œ¥’“µΩ */ }
 	inline void				SetVersion(int theVersion) { mVersion = theVersion; }
 	inline int				GetVersion() const { return mVersion; }
 };
