@@ -1,27 +1,3 @@
-/*
- * Portions of this file are based on the PopCap Games Framework
- * Copyright (C) 2005-2009 PopCap Games, Inc.
- *
- * Copyright (C) 2026 Zhou Qiankang <wszqkzqk@qq.com>
- *
- * SPDX-License-Identifier: LGPL-3.0-or-later AND LicenseRef-PopCap
- *
- * This file is part of PvZ-Portable.
- *
- * PvZ-Portable is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * PvZ-Portable is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with PvZ-Portable. If not, see <https://www.gnu.org/licenses/>.
- */
-
 #ifndef __DIALOG_H__
 #define __DIALOG_H__
 
@@ -34,12 +10,9 @@ namespace Sexy
 class DialogListener;
 class ButtonWidget;
 class DialogButton;
-class _Font;
+class Font;
 
-extern std::string DIALOG_YES_STRING;
-extern std::string DIALOG_NO_STRING;
-extern std::string DIALOG_OK_STRING;
-extern std::string DIALOG_CANCEL_STRING;
+typedef std::vector<std::string> StringVector;
 
 class Dialog : public Widget, public ButtonListener
 {
@@ -60,7 +33,7 @@ public:
 		ID_CANCEL	= 1001,
 		ID_FOOTER	= 1000
 	};
-
+	
 	enum
 	{
 		COLOR_HEADER = 0,
@@ -69,23 +42,23 @@ public:
 		COLOR_BUTTON_TEXT,
 		COLOR_BUTTON_TEXT_HILITE,
 		COLOR_BKG,
-		COLOR_OUTLINE,
+		COLOR_OUTLINE,		
 		NUM_COLORS
 	};
 
 	DialogListener*			mDialogListener;
-	Image*					mComponentImage;
+	Image*					mComponentImage;	
 	DialogButton*			mYesButton;
 	DialogButton*			mNoButton;
 	int						mNumButtons;
-
-	std::string				mDialogHeader;
-	std::string				mDialogFooter;
-	std::string				mDialogLines;
+	
+	SexyString				mDialogHeader;
+	SexyString				mDialogFooter;
+	SexyString				mDialogLines;
 
 	int						mButtonMode;
-	_Font*					mHeaderFont;
-	_Font*					mLinesFont;
+	Font*					mHeaderFont;
+	Font*					mLinesFont;	
 	int						mTextAlign;
 	int						mLineSpacingOffset;
 	int						mButtonHeight;
@@ -97,50 +70,47 @@ public:
 	int						mDragMouseY;
 	int						mId;
 	bool					mIsModal;
-	int						mResult;
+	int						mResult;	
 
 	int						mButtonHorzSpacing;
 	int						mButtonSidePadding;
-
+	
 
 public:
 	void					EnsureFonts();
 
 public:
-	Dialog(Image* theComponentImage, Image* theButtonComponentImage,
-		int theId, bool isModal, const std::string& theDialogHeader, const std::string& theDialogLines, const std::string& theDialogFooter, int theButtonMode); //UNICODE
+	Dialog(Image* theComponentImage, Image* theButtonComponentImage, 
+		int theId, bool isModal, const SexyString& theDialogHeader, const SexyString& theDialogLines, const SexyString& theDialogFooter, int theButtonMode); //UNICODE
 
-	~Dialog() override;
+	virtual ~Dialog();
 
-	virtual void			SetButtonFont(_Font* theFont);
-	virtual void			SetHeaderFont(_Font* theFont);
-	virtual void			SetLinesFont(_Font* theFont);
+	virtual void			SetButtonFont(Font* theFont);
+	virtual void			SetHeaderFont(Font* theFont);
+	virtual void			SetLinesFont(Font* theFont);
 
-	void					SetColor(int theIdx, const Color& theColor) override;
+	virtual void			SetColor(int theIdx, const Color& theColor);
 	virtual int				GetPreferredHeight(int theWidth);
 
-	void					Draw(Graphics* g) override;
-	void					AddedToManager(WidgetManager* theWidgetManager) override;
-	void					RemovedFromManager(WidgetManager* theWidgetManager) override;
-	void					OrderInManagerChanged() override;
-	void					Resize(int theX, int theY, int theWidth, int theHeight) override;
+	virtual void			Draw(Graphics* g);
+	virtual void			AddedToManager(WidgetManager* theWidgetManager);
+	virtual void			RemovedFromManager(WidgetManager* theWidgetManager);
+	virtual void			OrderInManagerChanged();
+	virtual void			Resize(int theX, int theY, int theWidth, int theHeight);
 
-	void					MouseDown(int x, int y, int theClickCount) override { Widget::MouseDown(x, y, theClickCount); }
-	void					MouseDown(int x, int y, int theBtnNum, int theClickCount) override;
-	void					MouseDrag(int x, int y) override;
-	void					MouseUp(int x, int y) override { Widget::MouseUp(x, y); }
-	void					MouseUp(int x, int y, int theClickCount) override { Widget::MouseUp(x, y, theClickCount); }
-	void					MouseUp(int x, int y, int theBtnNum, int theClickCount) override;
-	void					Update() override;
+	virtual void			MouseDown(int x, int y, int theClickCount) { Widget::MouseDown(x, y, theClickCount); }
+	virtual void			MouseDown(int x, int y, int theBtnNum, int theClickCount);
+	virtual void			MouseDrag(int x, int y);
+	virtual void			MouseUp(int x, int y) { Widget::MouseUp(x, y); }
+	virtual void			MouseUp(int x, int y, int theClickCount) { Widget::MouseUp(x, y, theClickCount); }
+	virtual void			MouseUp(int x, int y, int theBtnNum, int theClickCount);
+	virtual void			Update();
 	virtual	bool			IsModal();
 	virtual int				WaitForResult(bool autoKill = true);
 
-	void					ButtonPress(int theId) override;
-	void					ButtonDepress(int theId) override;
-	void					ButtonDownTick(int) override{}
-	void					ButtonMouseEnter(int) override{}
-	void					ButtonMouseLeave(int) override{}
-	void					ButtonMouseMove(int, int, int) override{}
+	virtual void			ButtonPress(int theId);
+	virtual void			ButtonDepress(int theId);
+	virtual void			ButtonDownTick(int theId);
 };
 
 }
